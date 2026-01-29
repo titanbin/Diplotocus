@@ -1,0 +1,8 @@
+html[data-theme="dark"] {
+  --color-background-primary: #fff !important;
+  --color-text-primary: #000 !important;
+  /* Add more overrides as needed */
+}
+html[data-theme="dark"] {
+  color-scheme: light;
+}
