@@ -1,0 +1,13 @@
+LICENSE
+README.md
+pyproject.toml
+readme.md
+diplotocus/__init__.py
+diplotocus/_version.py
+diplotocus/animations.py
+diplotocus/core.py
+diplotocus/easings.py
+diplotocus.egg-info/PKG-INFO
+diplotocus.egg-info/SOURCES.txt
+diplotocus.egg-info/dependency_links.txt
+diplotocus.egg-info/top_level.txt
