@@ -20,20 +20,6 @@ def dealias(mpl_obj,kwargs):
 
     return kwargs
 
-def get_main_alias(mpl_obj,properties):
-    if mpl_obj is None:
-        return properties
-    is_iterable = isinstance(properties,(list,np.ndarray,tuple))
-    properties = np.ravel(properties).astype(np.object_)
-    for i,property in enumerate(properties):
-        if property not in mpl_obj._alias_map:
-            for alias in mpl_obj._alias_map:
-                if property in mpl_obj._alias_map[alias]:
-                    properties[i] = alias
-    if is_iterable:
-        return properties
-    return properties[0]
-
 #----------------------------------------------
 # ANIMATION CLASSES
 #----------------------------------------------
@@ -74,6 +60,20 @@ class Animation:
         self.kwargs = dealias(self.mpl_obj_type,self.kwargs)
         if 'alpha' not in self.kwargs:
             self.kwargs['alpha'] = 1
+
+    def get_main_alias(self,properties):
+        if self.mpl_obj_type is None:
+            return properties
+        is_iterable = isinstance(properties,(list,np.ndarray,tuple))
+        properties = np.ravel(properties).astype(np.object_)
+        for i,property in enumerate(properties):
+            if property not in self.mpl_obj_type._alias_map:
+                for alias in self.mpl_obj_type._alias_map:
+                    if property in self.mpl_obj_type._alias_map[alias]:
+                        properties[i] = alias
+        if is_iterable:
+            return properties
+        return properties[0]
 
     def set_axis(self,axis):
         self.axis = axis
@@ -121,17 +121,21 @@ class Animation:
         self.x_max = x_max
         self.x_min = x_min
 
+    def sanitize_colors(self,properties,starts,ends):
+        for i in range(len(properties)):
+            if properties[i] in ['c','colors','color','edgecolor','facecolor','edgecolors','facecolors']:
+                starts[i] = list(mpl.colors.to_rgba_array(starts[i])[0])
+                ends[i] = list(mpl.colors.to_rgba_array(ends[i])[0])
+        return properties,starts,ends
+
     def tween(self,property,start,end,duration,delay=0,easing=None):
         return self.tweens([property],[start],[end],duration,delay,easing)
     
     def tweens(self,properties,starts,ends,duration,delay=0,easing=None):
         starts = [np.ravel(start) for start in starts]
         ends = [np.ravel(end) for end in ends]
-        properties = get_main_alias(self.mpl_obj_type,properties)
-        for i in range(len(properties)):
-            if properties[i] in ['c','colors','color','edgecolor','facecolor','edgecolors','facecolors']:
-                starts[i] = mpl.colors.to_rgba_array(starts[i])
-                ends[i] = mpl.colors.to_rgba_array(ends[i])
+        properties = self.get_main_alias(properties)
+        properties,starts,ends = self.sanitize_colors(properties,starts,ends)
         
         for property,start,end in zip(properties,starts,ends):
             new_anim = {
@@ -414,13 +418,17 @@ class Animation:
             if anim['easing'] is None:
                 anim['easing'] = self.easing
             t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
-            start = np.ravel(anim['start'])
-            end = np.ravel(anim['end'])
             if anim['name'] == 'scale':
+                start = np.ravel(anim['start'])
+                end = np.ravel(anim['end'])
                 self._scale(t,start,end)
             if anim['name'] == 'translate':
+                start = np.ravel(anim['start'])
+                end = np.ravel(anim['end'])
                 self._translate(t,start,end)
             if anim['name'] == 'rotate':
+                start = np.ravel(anim['start'])
+                end = np.ravel(anim['end'])
                 self._rotate(t,start,end)
 
     def get_center(self):
@@ -803,43 +811,27 @@ class scatter(Animation):
     def function(self,t,kwargs):
         x = self.x
         y = self.y
-
-        if 'spawn' in self.anims:
-            i_max = min(round(t*len(self.x)) + 1,len(self.x))
-            x = self.x[:i_max]
-            y = self.y[:i_max]
-            if 'color' in kwargs:
-                kwargs['color'] = kwargs['color'][:i_max]
-        if 'despawn' in self.anims:
-            i_max = max(round((1-t)*len(self.x)),0)
-            x = self.x[:i_max]
-            y = self.y[:i_max]
-            if 'color' in kwargs:
-                kwargs['color'] = kwargs['color'][:i_max]
-        if 'morph' in self.anims:
-            x = []
-            y = []
-            a = []
-            for i in range(len(self.x)):
-                x.append(self.x[i] + (self.new_x[i] - self.x[i])*t)
-                y.append(self.y[i] + (self.new_y[i] - self.y[i])*t)
-                if self.new_alpha is not None:
-                    a.append(kwargs['alpha'] + (self.new_alpha[i] - kwargs['alpha'])*t)
-                else:
-                    a.append(kwargs['alpha'])
-            kwargs['alpha'] = a
-        if 'demorph' in self.anims:
-            x = []
-            y = []
-            a = []
-            for i in range(len(self.x)):
-                x.append(self.x[i] + (self.new_x[i] - self.x[i])*(1-t))
-                y.append(self.y[i] + (self.new_y[i] - self.y[i])*(1-t))
-                if self.new_alpha is not None:
-                    a.append(kwargs['alpha'] + (self.new_alpha[i] - kwargs['alpha'])*t)
-                else:
-                    a.append(kwargs['alpha'])
-            kwargs['alpha'] = a
+        for anim in self.anims:
+            if anim['name'] == 'spawn':
+                i_max = min(round(t*len(self.x)) + 1,len(self.x))
+                x = self.x[:i_max]
+                y = self.y[:i_max]
+            if anim['name'] == 'despawn':
+                i_max = max(round((1-t)*len(self.x)),0)
+                x = self.x[:i_max]
+                y = self.y[:i_max]
+            if anim['name'] == 'morph':
+                x = []
+                y = []
+                for i in range(len(self.x)):
+                    x.append(self.x[i] + (anim['new_x'][i] - self.x[i])*t)
+                    y.append(self.y[i] + (anim['new_y'][i] - self.y[i])*t)
+            if anim['name'] == 'demorph':
+                x = []
+                y = []
+                for i in range(len(self.x)):
+                    x.append(self.x[i] + (anim['new_x'][i] - self.x[i])*(1-t))
+                    y.append(self.y[i] + (anim['new_y'][i] - self.y[i])*(1-t))
         
         self.obj = self.axis.scatter(x,y,**kwargs)
 
@@ -1163,27 +1155,27 @@ class plot(Animation):
     def function(self,t,kwargs):
         x = self.x
         y = self.y
-
-        if 'spawn' in self.anims:
-            i_max = min(round(t*len(self.x)) + 1,len(self.x))
-            x = self.x[:i_max]
-            y = self.y[:i_max]
-        if 'despawn' in self.anims:
-            i_max = max(round((1-t)*len(self.x)),0)
-            x = self.x[:i_max]
-            y = self.y[:i_max]
-        if 'morph' in self.anims:
-            x = []
-            y = []
-            for i in range(len(self.x)):
-                x.append(self.x[i] + (self.new_x[i] - self.x[i])*t)
-                y.append(self.y[i] + (self.new_y[i] - self.y[i])*t)
-        if 'demorph' in self.anims:
-            x = []
-            y = []
-            for i in range(len(self.x)):
-                x.append(self.x[i] + (self.new_x[i] - self.x[i])*(1-t))
-                y.append(self.y[i] + (self.new_y[i] - self.y[i])*(1-t))
+        for anim in self.anims:
+            if anim['name'] == 'spawn':
+                i_max = min(round(t*len(self.x)) + 1,len(self.x))
+                x = self.x[:i_max]
+                y = self.y[:i_max]
+            if anim['name'] == 'despawn':
+                i_max = max(round((1-t)*len(self.x)),0)
+                x = self.x[:i_max]
+                y = self.y[:i_max]
+            if anim['name'] == 'morph':
+                x = []
+                y = []
+                for i in range(len(self.x)):
+                    x.append(self.x[i] + (anim['new_x'][i] - self.x[i])*t)
+                    y.append(self.y[i] + (anim['new_y'][i] - self.y[i])*t)
+            if anim['name'] == 'demorph':
+                x = []
+                y = []
+                for i in range(len(self.x)):
+                    x.append(self.x[i] + (anim['new_x'][i] - self.x[i])*(1-t))
+                    y.append(self.y[i] + (anim['new_y'][i] - self.y[i])*(1-t))
         
         if isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
