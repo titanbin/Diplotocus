@@ -1,6 +1,7 @@
 import numpy as np
-import numbers
+import numbers,inspect
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 from svgpath2mpl import parse_path
 from matplotlib import transforms
 
@@ -54,6 +55,9 @@ class Animation:
         self.T = transforms.Affine2D()
         if not hasattr(self, 'mpl_obj_type'):
             self.mpl_obj_type = None
+        if not hasattr(self, 'mpl_plot_type'):
+            self.mpl_plot_type = None
+        self.possible_kwargs = self.get_possible_kwargs()
 
         kwargs = self.clean_kwargs(kwargs)
         self.kwargs = kwargs
@@ -61,6 +65,20 @@ class Animation:
         if 'alpha' not in self.kwargs:
             self.kwargs['alpha'] = 1
 
+    def get_possible_kwargs(self):
+        sig = inspect.signature(self.mpl_obj_type)
+        kwargs = [
+            param.name for param in sig.parameters.values() if
+            (param.kind == param.KEYWORD_ONLY or param.kind == param.VAR_KEYWORD or param.default != param.empty)
+            and param.name != 'kwargs']
+        
+        sig = inspect.signature(self.mpl_plot_type)
+        kwargs += [
+            param.name for param in sig.parameters.values() if
+            (param.kind == param.KEYWORD_ONLY or param.kind == param.VAR_KEYWORD or param.default != param.empty)
+            and param.name != 'kwargs']
+        return kwargs
+    
     def get_main_alias(self,properties):
         if self.mpl_obj_type is None:
             return properties
@@ -444,6 +462,23 @@ class Animation:
             offsets = self.obj.get_offsets()
             cx = np.mean(offsets[:, 0])
             cy = np.mean(offsets[:, 1])
+        elif self.mpl_obj_type == mpl.patches.Rectangle:
+            rects = self.obj.patches
+            if isinstance(rects, list) and len(rects) > 0:
+                centers_x = []
+                centers_y = []
+                for rect in rects:
+                    bbox = rect.get_bbox()
+                    cx = (bbox.x0 + bbox.x1) / 2
+                    cy = (bbox.y0 + bbox.y1) / 2
+                    centers_x.append(cx)
+                    centers_y.append(cy)
+                cx = np.mean(centers_x)
+                cy = np.mean(centers_y)
+            else:
+                bbox = self.obj.get_bbox()
+                cx = (bbox.x0 + bbox.x1) / 2
+                cy = (bbox.y0 + bbox.y1) / 2
         return (cx,cy)
 
 class axis_zoom(Animation):
@@ -794,6 +829,7 @@ class scatter(Animation):
     """
     def __init__(self,x,y, *args, **kwargs):
         self.mpl_obj_type = mpl.collections.Collection
+        self.mpl_plot_type = plt.plot
         super().__init__(*args, **kwargs)
 
         self.x = np.ravel(x)
@@ -1138,6 +1174,7 @@ class plot(Animation):
     """
     def __init__(self,x,y, *args, **kwargs):
         self.mpl_obj_type = mpl.lines.Line2D
+        self.mpl_plot_type = plt.plot
         super().__init__(*args, **kwargs)
 
         self.x = np.ravel(x)
@@ -2184,22 +2221,31 @@ class hist(Animation):
     (``plt.stairs(*np.histogram(data))``), or by setting *histtype* to
     'step' or 'stepfilled' rather than 'bar' or 'barstacked'.
     """
-    def __init__(self,x,bins=None,range=None, *args, **kwargs):
+    def __init__(self,x, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Rectangle
+        self.mpl_plot_type = plt.hist
         super().__init__(*args, **kwargs)
-        self.x = x
-        self.bins = bins
-        self.range = range
+        self.x = np.ravel(x)
+
+    def clean(self,x,clear_anims=True):
+        if self.obj is not None and self.base_color is None:
+            self.base_color = self.obj[0].get_facecolor()
+            if 'color' not in self.kwargs:
+                self.kwargs['color'] = self.base_color
+        super().clean(x,clear_anims)
     
     def function(self,t,kwargs):
         i_max = len(self.x)
-
-        if 'spawn' in self.anims:
-            i_max = min(round(t*len(self.x)) + 1,len(self.x))
-        if 'despawn' in self.anims:
-            i_max = max(round((1-t)*len(self.x)),0)
+        for anim in self.anims:
+            if anim['name'] == 'spawn':
+                i_max = min(round(t*len(self.x)) + 1,len(self.x))
+            elif anim['name'] == 'despawn':
+                i_max = max(round((1-t)*len(self.x)),0)
         
         x = self.x[:i_max]
-        h,edges,self.obj = self.axis.hist(x,bins=self.bins,range=self.range,**kwargs)
+        if 'bins' in kwargs and len(kwargs['bins']) == 1:
+            kwargs['bins'] = int(kwargs['bins'][0])
+        h,edges,self.obj = self.axis.hist(x,**kwargs)
 
 class hist2d(Animation):
     """

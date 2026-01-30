@@ -3,10 +3,10 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QListWidget, QGraphicsView,QGraphicsTextItem,
     QGraphicsScene, QGraphicsRectItem, QHBoxLayout, QVBoxLayout, QGraphicsLineItem,
     QLabel, QSizePolicy,QSplitter, QPushButton, QDialog, QLineEdit, QFormLayout, QComboBox, QListWidgetItem,
-    QGraphicsDropShadowEffect
+    QGraphicsDropShadowEffect, QGraphicsItem
 )
 from PySide6.QtCore import Qt, QPointF, QRectF, Signal, QObject, QMimeData, QEvent, QTimer, Slot, QThread, QSize, QPoint
-from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QDrag, QIcon, QKeySequence, QShortcut, QGuiApplication, QFontMetrics, QFont
+from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QDrag, QIcon, QKeySequence, QShortcut, QGuiApplication, QFontMetrics, QFont, QPainter, QPainterPath
 from PySide6.QtTest import QTest
 
 import queue,os,ast
@@ -66,6 +66,9 @@ class ElidedGraphicsTextItem(QGraphicsTextItem):
         )
         self.setPlainText(elided)
 
+    def paint(self,painter,option,widget):
+        super().paint(painter,option,widget)
+
 class TimelineClip(QGraphicsRectItem):
     def __init__(self, timeline, x, row, name, color):
         self.timeline = timeline
@@ -112,6 +115,8 @@ class TimelineClip(QGraphicsRectItem):
 
         self.update_labels()
 
+        self._remove_when_added = False
+
         self.setPos(x, self.row_to_y(row))
 
         self.timeline.derender_frames(x)
@@ -120,6 +125,8 @@ class TimelineClip(QGraphicsRectItem):
             self.timeline.set_timeline_width(x+CLIP_WIDTH)
         if x+CLIP_WIDTH > self.timeline.rightmost_clip:
             self.timeline.rightmost_clip = x+CLIP_WIDTH
+
+        self.background_pixmap = QPixmap('diplotocus/src/btn/btn_bg_{}.png'.format(name))
 
         self.open_settings()
 
@@ -211,6 +218,10 @@ class TimelineClip(QGraphicsRectItem):
         super().hoverMoveEvent(event)
 
     def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemSceneHasChanged:
+            if self._remove_when_added and self.scene() is not None:
+                self.scene().removeItem(self)
+                self._remove_when_added = False
         if change == QGraphicsRectItem.ItemPositionChange:
             if self.just_spawned:
                 self.just_spawned = False
@@ -252,6 +263,25 @@ class TimelineClip(QGraphicsRectItem):
         painter.setPen(Qt.NoPen)
         radius = 5
         painter.drawRoundedRect(self.rect(), radius, radius)
+        new_width = self.rect().width()
+        new_height = min(self.rect().height(),self.background_pixmap.rect().height())
+        cropped_pixmap = self.background_pixmap.copy(
+            0,
+            (self.background_pixmap.rect().height() - new_height)/2,
+            new_width,
+            new_height+4
+        )
+        mask = QPixmap(new_width, new_height+1)
+        mask.fill(Qt.transparent)
+        mask_painter = QPainter(mask)
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, new_width, new_height+1, radius, radius)
+        mask_painter.setClipPath(path)
+        mask_painter.drawPixmap(0, 0, cropped_pixmap)
+        mask_painter.end()
+
+        # Draw the masked pixmap
+        painter.drawPixmap(self.rect().topLeft(), mask)
     
     def mouseReleaseEvent(self, event):
         self.resize_left = False
@@ -297,8 +327,15 @@ class ClipSettingsDialog(QDialog):
         btn.clicked.connect(self.accept)
         self.main_layout.addWidget(btn)
 
+        self.rejected.connect(self.on_dialog_closed)
+    
+    def on_dialog_closed(self):
+        if self.clip.plot_object is not None:
+            for anim in self.clip.anims:
+                self.clip.plot_object['object'].anims.remove(anim)
+        self.clip._remove_when_added = True
+
     def accept(self):
-        print(self.properties,self.start_x)
         to_derender = False
 
         obj_i = self.plot_object.currentData()
@@ -738,7 +775,8 @@ class TimelineView(QGraphicsView):
                     if item.pos().x() + item.rect().width() > x_max:
                         x_max = item.pos().x() + item.rect().width()
                     if item.plot_object is not None:
-                        item.plot_object['object'].anims.remove(item.anim)
+                        for anim in item.anims:
+                            item.plot_object['object'].anims.remove(anim)
                     self.scene_obj.removeItem(item)
                     del item
             event.accept()
@@ -813,7 +851,7 @@ class TimelineView(QGraphicsView):
             self.resize_handle.height
         )
 
-        self.row_height = self.timeline_height / self.num_rows
+        self.row_height = min(self.timeline_height / self.num_rows,80)
         self.scene_obj.setSceneRect(0, 0, self.timeline_width, self.timeline_height + self.top_margin)
         self.background_rect.setRect(self.scene_obj.sceneRect())
         self.draw_row_lines() 
@@ -869,6 +907,13 @@ class TimelineView(QGraphicsView):
 
     def on_loop(self):
         self.loop = not self.loop
+
+    def change_speed(self):
+        speed = self.window.play_controls.btn_speed.text()[1:]
+        speeds = ['0.1','0.5','1']
+        new_speed = speeds[(speeds.index(speed)+1)%len(speeds)]
+        self.window.play_controls.btn_speed.setText('x{}'.format(new_speed))
+        self.play_timer.setInterval(1000/float(new_speed) // (30*3))
 
     def on_play(self):
         self.window.preview.on_pin_moved()
@@ -1139,6 +1184,7 @@ class PlayControls(QWidget):
     loop = Signal()
     saveVideo = Signal()
     clear = Signal(int)
+    speed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1202,16 +1248,18 @@ class PlayControls(QWidget):
         self.btn_clear.setToolTip("Clear rendered frames")
         self.btn_clear.clicked.connect(lambda: self.clear.emit(0))
 
+        self.btn_speed = QPushButton("x1")
+        self.btn_speed.setToolTip("Change speed")
+        self.btn_speed.clicked.connect(self.speed.emit)
+
         size = 36
-        for btn in (self.btn_start, self.btn_back, self.btn_play, self.btn_forward, self.btn_end, self.btn_loop, self.btn_save_video, self.btn_clear):
+        for btn in (self.btn_start, self.btn_back, self.btn_play,
+                    self.btn_forward, self.btn_end, self.btn_loop,
+                    self.btn_save_video, self.btn_clear, self.btn_speed):
             btn.setFixedSize(size, size)
             btn.setFocusPolicy(Qt.NoFocus)
 
         layout.addStretch(1)
-        
-        spacer = QWidget()
-        spacer.setFixedWidth(self.btn_back.width())
-        layout.addWidget(spacer)
 
         layout.addWidget(self.btn_clear)
         
@@ -1219,6 +1267,7 @@ class PlayControls(QWidget):
         spacer.setFixedWidth(self.btn_back.width()/3)
         layout.addWidget(spacer)
         
+        layout.addWidget(self.btn_speed)
         layout.addWidget(self.btn_start)
         layout.addWidget(self.btn_back)
         layout.addWidget(self.btn_play)
@@ -1328,6 +1377,7 @@ class MainWindow(QWidget):
         self.play_controls.loop.connect(self.timeline.on_loop)
         self.play_controls.saveVideo.connect(self.timeline.save_video)
         self.play_controls.clear.connect(self.timeline.derender_frames)
+        self.play_controls.speed.connect(self.timeline.change_speed)
 
         controls_layout.addWidget(bottom_widget)
         splitter.addWidget(controls_widget)
