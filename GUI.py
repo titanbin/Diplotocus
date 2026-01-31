@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QListWidget, QGraphicsView,QGraphicsTextItem,
     QGraphicsScene, QGraphicsRectItem, QHBoxLayout, QVBoxLayout, QGraphicsLineItem,
     QLabel, QSizePolicy,QSplitter, QPushButton, QDialog, QLineEdit, QFormLayout, QComboBox, QListWidgetItem,
-    QGraphicsDropShadowEffect, QGraphicsItem
+    QGraphicsItem, QFileDialog
 )
 from PySide6.QtCore import Qt, QPointF, QRectF, Signal, QObject, QMimeData, QEvent, QTimer, Slot, QThread, QSize, QPoint
 from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QDrag, QIcon, QKeySequence, QShortcut, QGuiApplication, QFontMetrics, QFont, QPainter, QPainterPath
@@ -123,6 +123,7 @@ class TimelineClip(QGraphicsRectItem):
         self.timeline.render_current_frame(x,x+CLIP_WIDTH)
         if self.timeline.timeline_width < x+CLIP_WIDTH:
             self.timeline.set_timeline_width(x+CLIP_WIDTH)
+        print(x+CLIP_WIDTH,self.timeline.rightmost_clip)
         if x+CLIP_WIDTH > self.timeline.rightmost_clip:
             self.timeline.rightmost_clip = x+CLIP_WIDTH
 
@@ -282,6 +283,72 @@ class TimelineClip(QGraphicsRectItem):
 
         # Draw the masked pixmap
         painter.drawPixmap(self.rect().topLeft(), mask)
+
+        border_color = color.darker(230)
+        pen = QPen(border_color)
+        painter.setBrush(Qt.NoBrush)
+        width = 2
+        pen.setWidth(width)
+        painter.setPen(pen)
+
+        rect = self.rect()
+
+        path = QPainterPath()
+        path.moveTo(
+            rect.left() + (1-0.707)*radius,
+            rect.bottom() - radius - width/2 + 0.707*radius
+        )
+        path.arcTo(
+            rect.left(), rect.bottom() - 2 * radius - width/2,
+            2 * radius, 2 * radius,
+            180+45, 45
+        )
+        path.lineTo(rect.right() - radius, rect.bottom() - width/2)
+        path.arcTo(
+            rect.right() - 2 * radius - width/2 + 3, rect.bottom() - 2 * radius - width/2 + 2,
+            2 * radius - 3, 2 * radius - 2,
+            270, 90
+        )
+        path.lineTo(rect.right() - width/2, rect.top() + radius)
+        path.arcTo(
+            rect.right() - 2 * radius - width/2, rect.top(),
+            2 * radius, 2 * radius,
+            0, 45
+        )
+        painter.drawPath(path)
+
+        border_color = color.lighter(100)
+        pen = QPen(border_color)
+        painter.setBrush(Qt.NoBrush)
+        width = 2
+        pen.setWidth(width)
+        painter.setPen(pen)
+
+        rect = self.rect()
+
+        path = QPainterPath()
+        path.moveTo(
+            rect.left() + (1-0.707)*radius,
+            rect.bottom() - radius - width/2 + 0.707*radius
+        )
+        path.arcTo(
+            rect.left(), rect.bottom() - 2 * radius - width/2,
+            2 * radius, 2 * radius,
+            180+45, -45
+        )
+        path.lineTo(rect.left(), rect.top() + radius)
+        path.arcTo(
+            rect.left(), rect.top() + width/2,
+            2 * radius, 2 * radius,
+            180, -90
+        )
+        path.lineTo(rect.right() - radius, rect.top() + width/2)
+        path.arcTo(
+            rect.right() - 2 * radius - width/2, rect.top() + width/2,
+            2 * radius, 2 * radius,
+            90, -45
+        )
+        painter.drawPath(path)
     
     def mouseReleaseEvent(self, event):
         self.resize_left = False
@@ -295,6 +362,7 @@ class TimelineClip(QGraphicsRectItem):
             self.obj_label.setPos(self.rect().x()+5,self.obj_label.pos().y())
         
         self.timeline.render_current_frame(self.pos().x(),self.pos().x()+self.rect().width())
+        self.timeline.compute_rightmost_clip()
         super().mouseReleaseEvent(event)
 
     def validate_resize(self, new_x, new_width):
@@ -780,6 +848,7 @@ class TimelineView(QGraphicsView):
                     self.scene_obj.removeItem(item)
                     del item
             event.accept()
+            self.compute_rightmost_clip()
 
             self.derender_frames(x_min)
             
@@ -866,6 +935,15 @@ class TimelineView(QGraphicsView):
                 item.setPos(item.pos().x(), item.row_to_y(row))
         super().resizeEvent(event)
 
+    def compute_rightmost_clip(self):
+        self.rightmost_clip = 0
+        for clip in self.scene_obj.items():
+            print(clip.pos())
+            if isinstance(clip, TimelineClip):
+                if clip.pos().x()+CLIP_WIDTH > self.rightmost_clip:
+                    self.rightmost_clip = clip.pos().x()+CLIP_WIDTH
+        print(self.rightmost_clip)
+
     def draw_row_lines(self):
         if len(self.row_lines) == 0:
             self.create_row_lines()
@@ -902,8 +980,16 @@ class TimelineView(QGraphicsView):
                 self.controls.set_playing(False)
                 if self.window.play_controls.btn_save_video.isChecked():
                     self.window.play_controls.btn_save_video.setChecked(False)
-                    self.window.GUI.seq.x = self.timeline_width+1
-                    self.window.GUI.seq.save_video(clean=False)
+                    self.window.GUI.seq.x = int(self.timeline_width+1)
+                    dialog = QFileDialog(self, "Save file")
+                    dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+                    dialog.setOption(QFileDialog.Option.DontUseNativeDialog, False)
+                    if dialog.exec():
+                        filename = dialog.selectedFiles()[0]
+                        if filename.split('.')[-1] in ['mp4','mov']:
+                            self.window.GUI.seq.save_video(path=filename,clean=False)
+                        else:
+                            self.window.GUI.seq.save_video(clean=False)
 
     def on_loop(self):
         self.loop = not self.loop
