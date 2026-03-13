@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from svgpath2mpl import parse_path
 from matplotlib import transforms
 
+from . import easings
+
 def dealias(mpl_obj,kwargs):
     if mpl_obj is None:
         return kwargs
@@ -46,26 +48,43 @@ class Animation:
         self.compute_timings()
         self.set_axis(axis)
         self.obj = None
-        self.anim_function = self.function
         self.base_color = None
         self.tween_properties = []
         self.tween_starts = []
         self.tween_ends = []
         self.transforms = []
+        self.x = None
+        self.y = None
+        self.persistent = False
         self.T = transforms.Affine2D()
         if not hasattr(self, 'mpl_obj_type'):
             self.mpl_obj_type = None
         if not hasattr(self, 'mpl_plot_type'):
             self.mpl_plot_type = None
+        self.alias_map = self.get_alias_map()
         self.possible_kwargs = self.get_possible_kwargs()
 
         kwargs = self.clean_kwargs(kwargs)
+        kwargs['animated'] = True
         self.kwargs = kwargs
         self.kwargs = dealias(self.mpl_obj_type,self.kwargs)
         if 'alpha' not in self.kwargs:
             self.kwargs['alpha'] = 1
 
+    def function(self):
+        pass
+
+    def get_alias_map(self):
+        if self.mpl_obj_type is None:
+            return None
+        alias_map = self.mpl_obj_type._alias_map
+        if self.mpl_plot_type == plt.plot and False:
+            alias_map['color'] = ['c']
+        return alias_map
+
     def get_possible_kwargs(self):
+        if self.mpl_obj_type is None:
+            return {}
         sig = inspect.signature(self.mpl_obj_type)
         kwargs = [
             param.name for param in sig.parameters.values() if
@@ -85,9 +104,9 @@ class Animation:
         is_iterable = isinstance(properties,(list,np.ndarray,tuple))
         properties = np.ravel(properties).astype(np.object_)
         for i,property in enumerate(properties):
-            if property not in self.mpl_obj_type._alias_map:
-                for alias in self.mpl_obj_type._alias_map:
-                    if property in self.mpl_obj_type._alias_map[alias]:
+            if property not in self.alias_map:
+                for alias in self.alias_map:
+                    if property in self.alias_map[alias]:
                         properties[i] = alias
         if is_iterable:
             return properties
@@ -112,17 +131,79 @@ class Animation:
         return self
 
     def apply(self,x):
-        if (x < self.x_min or x >= self.x_max) and len(self.anims) > 0:
+        if x < self.x_min:
+            return
+        if x >= self.x_max and self.persistent == False:
+            self.clean(self.x_max-2,clear_anims=False)
             return
         self.T = transforms.Affine2D()
         kwargs = self._tween(self.kwargs.copy(),x)
-        if self.x_max-self.x_min == 1:
-            self.anim_function(1,kwargs)
-            self.check_transforms(x)
-            return
-        t = self.easing.ease((x-self.x_min)/((self.x_max-self.x_min)-1))
-        self.anim_function(t,kwargs)
+        _x = x
+        if self.x_max-self.x_min == 1:#handle 1 frame anims
+            _x = self.x_max
+        self.anim_function(_x,kwargs)
         self.check_transforms(x)
+
+    def anim_function(self,x,kwargs):
+        data_x = self.x
+        data_y = self.y
+
+        #First pass to handle axis animations
+        for anim in self.anims:
+            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
+            if t < 0 or t > 1:
+                continue
+            if anim['name'] == 'axis_alpha':
+                kwargs['alpha'] = t
+
+        #Second pass to cut points if drawing or erasing
+        for anim in self.anims:
+            if self.x is None:
+                continue
+            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
+            if t < 0 or t > 1:
+                continue
+            i_max = len(self.x)
+            if anim['name'] == 'draw':
+                i_max = min(round(t*len(self.x)) + 1,len(self.x))
+            if anim['name'] == 'erase':
+                i_max = max(round((1-t)*len(self.x)),0)
+            data_x = self.x[:i_max]
+            if self.y is not None:
+                data_y = self.y[:i_max]
+            if 'c' in kwargs and isinstance(kwargs['c'],(list,np.ndarray)):
+                kwargs['c'] = kwargs['c'][:i_max]
+
+        #Third pass to morph or demorph
+        for anim in self.anims:
+            if self.x is None:
+                continue
+            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
+            if anim['name'] in ['translate','rotate','scale','tween']:
+                t = 1
+            if t < 0 or t > 1:
+                continue
+            if data_x is None or data_y is None:
+                continue
+            if anim['name'] == 'morph':
+                new_data_x = []
+                new_data_y = []
+                for i in range(len(data_x)):
+                    new_data_x.append(data_x[i] + (anim['new_x'][i] - data_x[i])*t)
+                    new_data_y.append(data_y[i] + (anim['new_y'][i] - data_y[i])*t)
+                data_x = new_data_x
+                data_y = new_data_y
+            if anim['name'] == 'demorph':
+                new_data_x = []
+                new_data_y = []
+                for i in range(len(data_x)):
+                    new_data_x.append(data_x[i] + (anim['new_x'][i] - data_x[i])*(1-t))
+                    new_data_y.append(data_y[i] + (anim['new_y'][i] - data_y[i])*(1-t))
+                data_x = new_data_x
+                data_y = new_data_y
+        
+        if self.function is not None:
+            self.function(data_x,data_y,x,kwargs)
 
     def initialize(self):
         self.clean(0)
@@ -134,6 +215,7 @@ class Animation:
         for anim in self.anims:
             if anim['duration'] + anim['delay'] > x_max:
                 x_max = anim['duration'] + anim['delay']
+                self.persistent = anim['persistent']
             if anim['delay'] < x_min:
                 x_min = anim['delay']
         self.x_max = x_max
@@ -146,10 +228,10 @@ class Animation:
                 ends[i] = list(mpl.colors.to_rgba_array(ends[i])[0])
         return properties,starts,ends
 
-    def tween(self,property,start,end,duration,delay=0,easing=None):
-        return self.tweens([property],[start],[end],duration,delay,easing)
+    def tween(self,property,start,end,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+        return self.tweens([property],[start],[end],duration,delay,easing,persistent=persistent)
     
-    def tweens(self,properties,starts,ends,duration,delay=0,easing=None):
+    def tweens(self,properties,starts,ends,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         starts = [np.ravel(start) for start in starts]
         ends = [np.ravel(end) for end in ends]
         properties = self.get_main_alias(properties)
@@ -163,7 +245,8 @@ class Animation:
                 'easing':easing,
                 'property':property,
                 'start':start,
-                'end':end
+                'end':end,
+                'persistent':persistent
             }
             self.anims.append(new_anim)
         self.compute_timings()
@@ -171,10 +254,11 @@ class Animation:
     
     def _tween(self,kwargs,x):
         for anim in self.anims:
-            if x < anim['delay'] or x >= anim['duration'] + anim['delay']:
+            if x < anim['delay']:
                 continue
             if anim['name'] != 'tween':
                 continue
+            x = min(x,anim['duration'] + anim['delay'])
             if anim['easing'] is None:
                 anim['easing'] = self.easing
             t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
@@ -183,52 +267,56 @@ class Animation:
             kwargs[anim['property']] = start + (end - start)*t
         return kwargs
 
-    def show(self,duration,delay=0,easing=None):
-        return self.tween('alpha',start=0,end=1,duration=duration,delay=delay,easing=easing)
+    def show(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+        return self.tween('alpha',start=0,end=1,duration=duration,delay=delay,easing=easing,persistent=persistent)
 
-    def hide(self,duration,delay=0,easing=None):
-        return self.tween('alpha',start=1,end=0,duration=duration,delay=delay,easing=easing)
+    def hide(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+        return self.tween('alpha',start=1,end=0,duration=duration,delay=delay,easing=easing,persistent=persistent)
     
-    def spawn(self,duration,delay=0,easing=None):
+    def draw(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
-            'name':'spawn',
+            'name':'draw',
             'duration':duration,
             'delay':delay,
-            'easing':easing
+            'easing':easing,
+            'persistent':persistent
         })
         self.compute_timings()
         return self
     
-    def despawn(self,duration,delay=0,easing=None):
+    def erase(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
-            'name':'despawn',
+            'name':'erase',
             'duration':duration,
             'delay':delay,
-            'easing':easing
+            'easing':easing,
+            'persistent':persistent
         })
         self.compute_timings()
         return self
     
-    def grow(self,duration,delay=0,easing=None):
+    def grow(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
             'name':'grow',
             'duration':duration,
             'delay':delay,
-            'easing':easing
+            'easing':easing,
+            'persistent':persistent
         })
         return self
     
-    def shrink(self,duration,delay=0,easing=None):
+    def shrink(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
             'name':'shrink',
             'duration':duration,
             'delay':delay,
-            'easing':easing
+            'easing':easing,
+            'persistent':persistent
         })
         self.compute_timings()
         return self
     
-    def scale(self,scale_start,scale_end,duration,delay=0,easing=None):
+    def scale(self,scale_start,scale_end,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         if isinstance(scale_start,(list,tuple,np.ndarray)):
             scalex_start,scaley_start = scale_start
         else:
@@ -246,7 +334,8 @@ class Animation:
             'delay':delay,
             'easing':easing,
             'start':(scalex_start,scaley_start),
-            'end':(scalex_end,scaley_end)
+            'end':(scalex_end,scaley_end),
+            'persistent':persistent
         })
         self.compute_timings()
         return self
@@ -277,14 +366,15 @@ class Animation:
             else:
                 o.set_transform(self.T + self.axis.transData)
 
-    def rotate(self,angle_start,angle_end,duration,delay=0,easing=None):
+    def rotate(self,angle_start,angle_end,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
             'name':'rotate',
             'duration':duration,
             'delay':delay,
             'easing':easing,
             'start':angle_start,
-            'end':angle_end
+            'end':angle_end,
+            'persistent':persistent
         })
         self.compute_timings()
         return self
@@ -316,14 +406,15 @@ class Animation:
             else:
                 o.set_transform(self.T + self.axis.transData)
     
-    def translate(self,start_pos,end_pos,duration,delay=0,easing=None):
+    def translate(self,start_pos,end_pos,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
             'name':'translate',
             'duration':duration,
             'delay':delay,
             'easing':easing,
             'start':start_pos,
-            'end':end_pos
+            'end':end_pos,
+            'persistent':persistent
         })
         self.compute_timings()
         return self
@@ -339,28 +430,44 @@ class Animation:
                 o.set_offsets(offsets + np.array([pos_x,pos_y]))
             else:
                 o.set_transform(self.T + self.axis.transData)
+
+    def axis_alpha(self,start_alpha,end_alpha,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+        self.start_alpha = start_alpha
+        self.end_alpha = end_alpha
+        
+        self.anims.append({
+            'name':'axis_alpha',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'persistent':persistent
+        })
+        self.compute_timings()
+        return self
     
-    def update(self,duration,delay=0,easing=None):
+    def update(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
             'name':'update',
             'duration':duration,
             'delay':delay,
-            'easing':easing
+            'easing':easing,
+            'persistent':persistent
         })
         self.compute_timings()
         return self
     
-    def deupdate(self,duration,delay=0,easing=None):
+    def deupdate(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
             'name':'deupdate',
             'duration':duration,
             'delay':delay,
-            'easing':easing
+            'easing':easing,
+            'persistent':persistent
         })
         self.compute_timings()
         return self
     
-    def morph(self,new_x,new_y,duration,delay=0,easing=None):
+    def morph(self,new_x,new_y,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         # TODO : if new_x/new_y not the same size, resample them to match
         if isinstance(new_x,numbers.Number):
             new_x = [new_x]
@@ -372,31 +479,42 @@ class Animation:
             'delay':delay,
             'easing':easing,
             'new_x':new_x,
-            'new_y':new_y
+            'new_y':new_y,
+            'persistent':persistent
         })
         self.compute_timings()
         return self
     
-    def demorph(self,duration,delay=0,easing=None):
+    def demorph(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
             'name':'demorph',
             'duration':duration,
             'delay':delay,
-            'easing':easing
+            'easing':easing,
+            'persistent':persistent
         })
         return self
     
-    def reverse(self,duration,delay=0,easing=None):
+    def reverse(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
             'name':'reverse',
             'duration':duration,
             'delay':delay,
-            'easing':easing
+            'easing':easing,
+            'persistent':persistent
         })
         self.compute_timings()
         return self
     
     def clean(self,x,clear_anims=True):
+        for anim in self.anims:
+            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
+            if t != 1:
+                continue
+            if anim['name'] == 'morph':
+                self.x = anim['new_x']
+                self.y = anim['new_y']
+
         if x >= self.x_min-1 and x < self.x_max-1 and self.obj is not None:
             if isinstance(self.obj,list):
                 for obj in self.obj:
@@ -431,11 +549,12 @@ class Animation:
         if self.mpl_obj_type is None:
             return
         for anim in self.anims:
-            if x < anim['delay'] or x >= anim['duration'] + anim['delay']:
+            if x < anim['delay']:
                 continue
+            _x = min(x,anim['duration'] + anim['delay'])
             if anim['easing'] is None:
                 anim['easing'] = self.easing
-            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
+            t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
             if anim['name'] == 'scale':
                 start = np.ravel(anim['start'])
                 end = np.ravel(anim['end'])
@@ -512,8 +631,8 @@ class axis_zoom(Animation):
         self.zoom = 1/self.zoom
         return self
 
-    def function(self,t,kwargs):
-        if t == 0:
+    def function(self,x,kwargs):
+        if x == self.x_min:
             self.width_init  = self.axis.get_xlim()[1]-self.axis.get_xlim()[0]
             self.height_init = self.axis.get_ylim()[1]-self.axis.get_ylim()[0]
             self.width_end = self.width_init * self.zoom
@@ -526,6 +645,31 @@ class axis_zoom(Animation):
         y_range = (center[1] - height/2, center[1] + height/2)
         self.axis.set_xlim(x_range[0],x_range[1])
         self.axis.set_ylim(y_range[0],y_range[1])
+
+class axis(Animation):
+    def __init__(self,axis=None):
+        super().__init__(axis=axis)        
+
+    def function(self,data_x,data_y,x,kwargs):
+        alpha = kwargs['alpha']
+        for artist in self.axis.get_children():
+            try:
+                artist.set_alpha(alpha)#TODO : should multiply by artist alpha value
+            except AttributeError:
+                pass
+        self.axis.patch.set_alpha(alpha)
+        self.axis.xaxis.label.set_alpha(alpha)
+        self.axis.yaxis.label.set_alpha(alpha)
+        for label in self.axis.get_xticklabels():
+            label.set_alpha(alpha)
+        for label in self.axis.get_yticklabels():
+            label.set_alpha(alpha)
+        for tick in self.axis.xaxis.get_major_ticks():
+            tick.tick1line.set_alpha(alpha)
+            tick.tick2line.set_alpha(alpha)
+        for tick in self.axis.yaxis.get_major_ticks():
+            tick.tick1line.set_alpha(alpha)
+            tick.tick2line.set_alpha(alpha)
 
 class axis_limits(Animation):
     """
@@ -558,8 +702,8 @@ class axis_limits(Animation):
         self.xlim = xlim
         self.ylim = ylim
 
-    def function(self,t,kwargs):
-        if t == 0:
+    def function(self,x,kwargs):
+        if x == self.x_min:
             self.xlim_init = self.axis.get_xlim()
             self.ylim_init = self.axis.get_ylim()
             if self.xlim is not None:
@@ -609,8 +753,8 @@ class axis_move(Animation):
         self.pos = self.pos_init
         return self
 
-    def function(self,t,kwargs):
-        if t == 0:
+    def function(self,x,kwargs):
+        if x == self.x_min:
             width  = self.axis.get_xlim()[1]-self.axis.get_xlim()[0]
             height = self.axis.get_ylim()[1]-self.axis.get_ylim()[0]
             self.pos_init = (self.axis.get_xlim()[0]+width/2,self.axis.get_ylim()[0]+height/2)
@@ -830,6 +974,7 @@ class scatter(Animation):
     def __init__(self,x,y, *args, **kwargs):
         self.mpl_obj_type = mpl.collections.Collection
         self.mpl_plot_type = plt.plot
+
         super().__init__(*args, **kwargs)
 
         self.x = np.ravel(x)
@@ -840,36 +985,12 @@ class scatter(Animation):
     def clean(self,x,clear_anims=True):
         if self.obj is not None and self.base_color is None:
             self.base_color = self.obj.get_edgecolors()[0]
-            if 'color' not in self.kwargs:
+            if 'color' not in self.kwargs and 'c' not in self.kwargs:
                 self.kwargs['color'] = self.base_color
         super().clean(x,clear_anims)
     
-    def function(self,t,kwargs):
-        x = self.x
-        y = self.y
-        for anim in self.anims:
-            if anim['name'] == 'spawn':
-                i_max = min(round(t*len(self.x)) + 1,len(self.x))
-                x = self.x[:i_max]
-                y = self.y[:i_max]
-            if anim['name'] == 'despawn':
-                i_max = max(round((1-t)*len(self.x)),0)
-                x = self.x[:i_max]
-                y = self.y[:i_max]
-            if anim['name'] == 'morph':
-                x = []
-                y = []
-                for i in range(len(self.x)):
-                    x.append(self.x[i] + (anim['new_x'][i] - self.x[i])*t)
-                    y.append(self.y[i] + (anim['new_y'][i] - self.y[i])*t)
-            if anim['name'] == 'demorph':
-                x = []
-                y = []
-                for i in range(len(self.x)):
-                    x.append(self.x[i] + (anim['new_x'][i] - self.x[i])*(1-t))
-                    y.append(self.y[i] + (anim['new_y'][i] - self.y[i])*(1-t))
-        
-        self.obj = self.axis.scatter(x,y,**kwargs)
+    def function(self,data_x,data_y,x,kwargs):
+        self.obj = self.axis.scatter(data_x,data_y,**kwargs)
 
 class plot(Animation):
     """
@@ -1189,35 +1310,98 @@ class plot(Animation):
                 self.kwargs['color'] = self.base_color
         super().clean(x,clear_anims)
 
-    def function(self,t,kwargs):
-        x = self.x
-        y = self.y
-        for anim in self.anims:
-            if anim['name'] == 'spawn':
-                i_max = min(round(t*len(self.x)) + 1,len(self.x))
-                x = self.x[:i_max]
-                y = self.y[:i_max]
-            if anim['name'] == 'despawn':
-                i_max = max(round((1-t)*len(self.x)),0)
-                x = self.x[:i_max]
-                y = self.y[:i_max]
-            if anim['name'] == 'morph':
-                x = []
-                y = []
-                for i in range(len(self.x)):
-                    x.append(self.x[i] + (anim['new_x'][i] - self.x[i])*t)
-                    y.append(self.y[i] + (anim['new_y'][i] - self.y[i])*t)
-            if anim['name'] == 'demorph':
-                x = []
-                y = []
-                for i in range(len(self.x)):
-                    x.append(self.x[i] + (anim['new_x'][i] - self.x[i])*(1-t))
-                    y.append(self.y[i] + (anim['new_y'][i] - self.y[i])*(1-t))
-        
+    def function(self,data_x,data_y,x,kwargs):
         if isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
         
-        self.obj = self.axis.plot(x,y,**kwargs)
+        self.obj = self.axis.plot(data_x,data_y,**kwargs)
+
+class step(Animation):
+    """
+    Make a step plot.
+
+    Call signatures::
+
+        step(x, y, [fmt], *, data=None, where='pre', **kwargs)
+        step(x, y, [fmt], x2, y2, [fmt2], ..., *, where='pre', **kwargs)
+
+    This is just a thin wrapper around `.plot` which changes some
+    formatting options. Most of the concepts and parameters of plot can be
+    used here as well.
+
+    .. note::
+
+        This method uses a standard plot with a step drawstyle: The *x*
+        values are the reference positions and steps extend left/right/both
+        directions depending on *where*.
+
+        For the common case where you know the values and edges of the
+        steps, use `~.Axes.stairs` instead.
+
+    Parameters
+    ----------
+    x : array-like
+        1D sequence of x positions. It is assumed, but not checked, that
+        it is uniformly increasing.
+
+    y : array-like
+        1D sequence of y levels.
+
+    fmt : str, optional
+        A format string, e.g. 'g' for a green line. See `.plot` for a more
+        detailed description.
+
+        Note: While full format strings are accepted, it is recommended to
+        only specify the color. Line styles are currently ignored (use
+        the keyword argument *linestyle* instead). Markers are accepted
+        and plotted on the given positions, however, this is a rarely
+        needed feature for step plots.
+
+    where : {'pre', 'post', 'mid'}, default: 'pre'
+        Define where the steps should be placed:
+
+        - 'pre': The y value is continued constantly to the left from
+            every *x* position, i.e. the interval ``(x[i-1], x[i]]`` has the
+            value ``y[i]``.
+        - 'post': The y value is continued constantly to the right from
+            every *x* position, i.e. the interval ``[x[i], x[i+1])`` has the
+            value ``y[i]``.
+        - 'mid': Steps occur half-way between the *x* positions.
+
+    data : indexable object, optional
+        An object with labelled data. If given, provide the label names to
+        plot in *x* and *y*.
+
+    **kwargs
+        Additional parameters are the same as those for `.plot`.
+
+    Returns
+    -------
+    list of `.Line2D`
+        Objects representing the plotted data.
+    """
+    def __init__(self,x,y, *args, **kwargs):
+        self.mpl_obj_type = mpl.lines.Line2D
+        self.mpl_plot_type = plt.plot
+        super().__init__(*args, **kwargs)
+
+        self.x = np.ravel(x)
+        self.y = np.ravel(y)
+        if self.x.size != self.y.size:
+            raise ValueError("x and y must be the same size")
+
+    def clean(self,x,clear_anims=True):
+        if self.obj is not None and self.base_color is None:
+            self.base_color = self.obj[0].get_color()
+            if 'color' not in self.kwargs:
+                self.kwargs['color'] = self.base_color
+        super().clean(x,clear_anims)
+
+    def function(self,data_x,data_y,x,kwargs):
+        if isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        
+        self.obj = self.axis.step(data_x,data_y,**kwargs)
 
 class fill_between(Animation):
     """
@@ -1366,47 +1550,38 @@ class fill_between(Animation):
     """
     def __init__(self,x,y1,y2, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.x = np.array(x)
-        self.y1 = np.array(y1).reshape(-1)
-        self.y2 = np.array(y2).reshape(-1)
+        self.x = np.ravel(x)
+        self.y1 = np.ravel(y1)
+        self.y2 = np.ravel(y2)
         if self.y1.size != self.x.size:
             self.y1 = np.ones_like(self.x)*self.y1[0]
         if self.y2.size != self.x.size:
             self.y2 = np.ones_like(self.x)*self.y2[0]
+
+    def clean(self,x,clear_anims=True):
+        if self.obj is not None and self.base_color is None:
+            self.base_color = self.obj.get_facecolor()
+            if 'facecolor' not in self.kwargs:
+                self.kwargs['facecolor'] = self.base_color
+        super().clean(x,clear_anims)
     
-    def function(self,t,kwargs):
-        x = self.x
+    def function(self,data_x,data_y,x,kwargs):
         y1 = self.y1
         y2 = self.y2
+
+        for anim in self.anims:
+            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
+            if t < 0 or t > 1:
+                continue
+            i_max = len(self.x)
+            if anim['name'] == 'draw':
+                i_max = min(round(t*len(self.x)) + 1,len(self.x))
+            if anim['name'] == 'erase':
+                i_max = max(round((1-t)*len(self.x)),0)
+            y1 = y1[:i_max]
+            y2 = y2[:i_max]
         
-        if 'spawn' in self.anims:
-            i_max = min(round(t*len(self.x)) + 1,len(self.x))
-            x = self.x[:i_max]
-            y1 = self.y1[:i_max]
-            y2 = self.y2[:i_max]
-            if 'color' in kwargs:
-                kwargs['color'] = kwargs['color'][:i_max]
-        if 'despawn' in self.anims:
-            i_max = max(round((1-t)*len(self.x)),0)
-            x = self.x[:i_max]
-            y1 = self.y1[:i_max]
-            y2 = self.y2[:i_max]
-            if 'color' in kwargs:
-                kwargs['color'] = kwargs['color'][:i_max]
-        if 'grow' in self.anims:
-            widths = self.y2 - self.y1
-            centers = (self.y2 + self.y1)/2
-            x = self.x
-            y1 = centers - t*widths/2
-            y2 = centers + t*widths/2
-        if 'shrink' in self.anims:
-            widths = self.y2 - self.y1
-            centers = (self.y2 + self.y1)/2
-            x = self.x
-            y1 = centers - (1-t)*widths/2
-            y2 = centers + (1-t)*widths/2
-        
-        self.obj = self.axis.fill_between(x=x,y1=y1,y2=y2,**kwargs)
+        self.obj = self.axis.fill_between(x=data_x,y1=y1,y2=y2,**kwargs)
 
 class fill_betweenx(Animation):
     """
@@ -1568,14 +1743,14 @@ class fill_betweenx(Animation):
         x1 = self.x1
         x2 = self.x2
         
-        if 'spawn' in self.anims:
+        if 'draw' in self.anims:
             i_max = min(round(t*len(self.y)) + 1,len(self.y))
             y = self.y[:i_max]
             x1 = self.x1[:i_max]
             x2 = self.x2[:i_max]
             if 'color' in kwargs:
                 kwargs['color'] = kwargs['color'][:i_max]
-        if 'despawn' in self.anims:
+        if 'erase' in self.anims:
             i_max = max(round((1-t)*len(self.y)),0)
             y = self.y[:i_max]
             x1 = self.x1[:i_max]
@@ -1729,9 +1904,9 @@ class axvline(Animation):
         x = self.x
         y_max = 1
 
-        if 'spawn' in self.anims:
+        if 'draw' in self.anims:
             y_max = t
-        if 'despawn' in self.anims:
+        if 'erase' in self.anims:
             y_max = (1-t)
 
         self.obj = self.axis.axvline(x,ymin=0,ymax=y_max,**kwargs)
@@ -1970,7 +2145,7 @@ class errorbar(Animation):
         xerr = self.xerr
         yerr = self.yerr
         
-        if 'spawn' in self.anims:
+        if 'draw' in self.anims:
             i_max = min(round(t*len(self.x)) + 1,len(self.x))
             x = self.x[:i_max]
             y = self.y[:i_max]
@@ -1978,7 +2153,7 @@ class errorbar(Animation):
             yerr = self.yerr[:i_max]
             if 'color' in kwargs and isinstance(kwargs['color'],(list,np.ndarray)):
                 kwargs['color'] = kwargs['color'][:i_max]
-        if 'despawn' in self.anims:
+        if 'erase' in self.anims:
             i_max = max(round((1-t)*len(self.x)),0)
             x = self.x[:i_max]
             y = self.y[:i_max]
@@ -2237,9 +2412,9 @@ class hist(Animation):
     def function(self,t,kwargs):
         i_max = len(self.x)
         for anim in self.anims:
-            if anim['name'] == 'spawn':
+            if anim['name'] == 'draw':
                 i_max = min(round(t*len(self.x)) + 1,len(self.x))
-            elif anim['name'] == 'despawn':
+            elif anim['name'] == 'erase':
                 i_max = max(round((1-t)*len(self.x)),0)
         
         x = self.x[:i_max]
@@ -2387,9 +2562,9 @@ class hist2d(Animation):
     def function(self,t,kwargs):
         i_max = len(self.x)
 
-        if 'spawn' in self.anims:
+        if 'draw' in self.anims:
             i_max = min(round(t*len(self.x)) + 1,len(self.x))
-        if 'despawn' in self.anims:
+        if 'erase' in self.anims:
             i_max = max(round((1-t)*len(self.x)),0)
         
         x = self.x[:i_max]

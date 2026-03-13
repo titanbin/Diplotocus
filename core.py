@@ -1,7 +1,8 @@
 import numpy as np
-import subprocess,os,shlex
+import subprocess,os,shlex,pickle
 import matplotlib.pyplot as plt
 import matplotlib
+from copy import deepcopy
 matplotlib.use("Agg")
 import shutil
 try:
@@ -43,6 +44,13 @@ def status_message(start_msg, end_msg):
 # SEQUENCE CLASS
 #----------------------------------------------
 
+def load_project(path):
+    seq = pickle.load(open(path, 'rb'))
+    animations = seq.animations
+    seq.x = 0
+    seq.clean_all()
+    return seq,animations
+
 class Sequence:
     def __init__(self,name='Unnamed',fig=None,quiet=False,dpi=200,transparent=False,white=False,noaxis=False,easing=easeLinear()):
         if fig is None:
@@ -67,6 +75,9 @@ class Sequence:
         self.x = 0
         self.sequence_str = ''
         self.transparent = transparent
+        self.animations = []
+        namespace = sys._getframe(1).f_globals['__file__']
+        self.full_path = '/'.join(namespace.split('/')[:-1])
         if white:
             self.set_white()
         if noaxis:
@@ -87,18 +98,23 @@ class Sequence:
             axis.tick_params(axis='both',colors='white')
 
     def clean_all(self):
-        for line in self.ax.lines:
-            line = np.ravel(line)
-            for l in line:
-                l.remove()
-        for coll in self.ax.collections:
-            coll = np.ravel(coll)
-            for c in coll:
-                c.remove()
-        for patch in self.ax.patches:
-            patch = np.ravel(patch)
-            for p in patch:
-                p.remove()
+        axes = np.ravel(self.ax)
+        for axis in axes:
+            for line in axis.lines:
+                line = np.ravel(line)
+                for l in line:
+                    if l.get_animated():
+                        l.remove()
+            for coll in axis.collections:
+                coll = np.ravel(coll)
+                for c in coll:
+                    if c.get_animated():
+                        c.remove()
+            for patch in axis.patches:
+                patch = np.ravel(patch)
+                for p in patch:
+                    if p.get_animated():
+                        p.remove()
 
     def plot(self,animations,x=0,easing=None,debug=False):
         if isinstance(animations,Animation):
@@ -106,15 +122,10 @@ class Sequence:
 
         for animation in animations:
             if animation.obj is not None and animation.x_min <= x < animation.x_max:
-                if isinstance(animation.obj,list):
-                    for obj in animation.obj:
-                        try:
-                            obj.remove()
-                        except:
-                            pass
-                else:
+                objects = np.ravel(animation.obj)
+                for obj in objects:
                     try:
-                        animation.obj.remove()
+                        obj.remove()
                     except:
                         pass
             
@@ -137,6 +148,8 @@ class Sequence:
     def animate(self,animations,easing=None,debug=False):
         if isinstance(animations,Animation):
             animations = (animations,)
+        self.animations = deepcopy(np.array(animations))
+        
         x_max = 0
         for animation in animations:
             if animation.axis is None:
@@ -229,6 +242,10 @@ class Sequence:
             <source src="{}" type="video/mp4">
             </video>
         """.format(video_fn)))
+    
+    def save_project(self,path):
+        with open(path, 'wb') as f:
+            pickle.dump(self, f)
 
 
 #TODO : implementing blitting as in https://matplotlib.org/stable/users/explain/animations/blitting.html
@@ -237,3 +254,8 @@ class Sequence:
 #TODO : implement deepcopy of fig so that we can rerun the same code of Sequence without having to reinitialize the fig, because it changes in the sequence code
 #code implemented in the init of sequence, but the axes are regenerated from the copied figure, so if some anims use a specific axis, it does not exist anymore.
 #have to, as initialisation, replace the specific axis with the new one (save old axis in Sequence, find index of specific axis in old axes, get new axis using index)
+
+#TODO : update all functions past plot so that function() takes x not t, and loop over all anims and compute each t
+#depending on the anim xmin and xmax (delay and duration).
+
+#TODO : save and load files.

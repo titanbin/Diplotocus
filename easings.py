@@ -7,9 +7,6 @@ import sys, inspect
 #TODO: change plot of easings.ipynb like this : https://api.flutter.dev/flutter/animation/Curves/easeInBack-constant.html
 
 class Easing:
-    def __init__(self,func=None):
-        self.func = func
-
     def ease(self,x):
         return self.func(x)
     
@@ -82,7 +79,10 @@ class easeCubicBezier(Easing):
 #LINEAR
 class easeLinear(Easing):
     def __init__(self):
-        super().__init__(lambda x:x)
+        pass
+
+    def func(self,x):
+        return x
 
 # SINE
 class easeInSine(Easing):

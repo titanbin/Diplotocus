@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QPointF, QRectF, Signal, QObject, QMimeData, QEvent, QTimer, Slot, QThread, QSize, QPoint
 from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QDrag, QIcon, QKeySequence, QShortcut, QGuiApplication, QFontMetrics, QFont, QPainter, QPainterPath
-from PySide6.QtTest import QTest
 
 import queue,os,ast
 
@@ -47,7 +46,6 @@ class ElidedGraphicsTextItem(QGraphicsTextItem):
         self.parent = parent
         self.full_text = text
         self.max_width = 0
-        self.setPlainText(text)
 
     def set_text(self, text):
         self.full_text = text
@@ -65,16 +63,23 @@ class ElidedGraphicsTextItem(QGraphicsTextItem):
             int(self.max_width)
         )
         self.setPlainText(elided)
-
-    def paint(self,painter,option,widget):
-        super().paint(painter,option,widget)
+        self.setTextWidth(-1)
 
 class TimelineClip(QGraphicsRectItem):
-    def __init__(self, timeline, x, row, name, color):
+    def __init__(self, timeline, x, row, name, width=None, open_settings=True):
+        if width == None:
+            width = CLIP_WIDTH
         self.timeline = timeline
         self.plot_object = None
-        super().__init__(0, 0, CLIP_WIDTH, self.timeline.row_height)
+        super().__init__(0, 0, width, self.timeline.row_height)
         self.just_spawned = True
+
+        self.base_color = '#999999'
+        for i in range(self.timeline.window.list_widget.count()):
+            item = self.timeline.window.list_widget.item(i)
+            if item.text() == name:
+                color = item.background().color().name()
+                break
 
         self.base_color = color
         self.name = name
@@ -96,7 +101,7 @@ class TimelineClip(QGraphicsRectItem):
         self.type_label = ElidedGraphicsTextItem(name, self)
         self.type_label.setDefaultTextColor(Qt.white)
         self.type_label.setPos(5, 5) 
-        self.type_label.setTextWidth(CLIP_WIDTH - 10)
+        self.type_label.setTextWidth(width - 10)
         self.type_label.setFlag(QGraphicsTextItem.ItemIsSelectable, False)
         self.type_label.setFlag(QGraphicsTextItem.ItemIsFocusable, False)
         font = self.type_label.font()
@@ -107,7 +112,7 @@ class TimelineClip(QGraphicsRectItem):
         self.obj_label = ElidedGraphicsTextItem('', self)
         self.obj_label.setDefaultTextColor(Qt.white)
         self.obj_label.setPos(5, 20)
-        self.obj_label.setTextWidth(CLIP_WIDTH - 10)
+        self.obj_label.setTextWidth(width - 10)
         self.obj_label.setFlag(QGraphicsTextItem.ItemIsSelectable, False)
         self.obj_label.setFlag(QGraphicsTextItem.ItemIsFocusable, False)
 
@@ -117,19 +122,20 @@ class TimelineClip(QGraphicsRectItem):
 
         self._remove_when_added = False
 
-        self.setPos(x, self.row_to_y(row))
+        self.setPos(x, self.timeline.row_to_y(row))
 
         self.timeline.derender_frames(x)
-        self.timeline.render_current_frame(x,x+CLIP_WIDTH)
-        if self.timeline.timeline_width < x+CLIP_WIDTH:
-            self.timeline.set_timeline_width(x+CLIP_WIDTH)
-        print(x+CLIP_WIDTH,self.timeline.rightmost_clip)
-        if x+CLIP_WIDTH > self.timeline.rightmost_clip:
-            self.timeline.rightmost_clip = x+CLIP_WIDTH
+        self.timeline.render_current_frame(x,x+width)
+        if self.timeline.timeline_width < x+width:
+            self.timeline.set_timeline_width(x+width)
+
+        if x+width > self.timeline.rightmost_clip:
+            self.timeline.rightmost_clip = x+width
 
         self.background_pixmap = QPixmap('diplotocus/src/btn/btn_bg_{}.png'.format(name))
 
-        self.open_settings()
+        if open_settings:
+            self.open_settings()
 
     def update_labels(self):
         self.type_label.set_text(self.name)
@@ -139,24 +145,27 @@ class TimelineClip(QGraphicsRectItem):
             text = self.plot_object['name']
         self.obj_label.set_text(text)
 
-    def add_plot_object(self,name,x):
+    def add_plot_object(self,name,x,duration=None):
+        if duration is None:
+            duration = self.rect().width()+1
         if self.plot_object is None:
             return
         obj = self.plot_object['object']
         len_before = len(obj.anims)
         if name == "Translate":
-            obj.translate((0,0),(1,1),duration=CLIP_WIDTH+1,delay=x)
+            obj.translate((0,0),(1,1),duration=duration,delay=x)
         elif name == "Rotate":
-            obj.rotate(0,360,duration=CLIP_WIDTH+1,delay=x)
+            obj.rotate(0,360,duration=duration,delay=x)
         elif name == "Scale":
-            obj.scale((1,1),(2,2),duration=CLIP_WIDTH+1,delay=x)
+            obj.scale((1,1),(2,2),duration=duration,delay=x)
         elif name == "Morph":
             new_x = self.plot_object['new_x']
             new_y = self.plot_object['new_y']
-            obj.morph(new_x=new_x,new_y=new_y,duration=CLIP_WIDTH+1,delay=x)
+            obj.morph(new_x=new_x,new_y=new_y,duration=duration,delay=x)
         elif name == 'Tween':
-
-            obj.tweens(properties=[],starts=[],ends=[],duration=CLIP_WIDTH+1,delay=x)
+            obj.tweens(properties=[],starts=[],ends=[],duration=duration,delay=x)
+        elif name == 'Draw':
+            obj.draw(duration=duration,delay=x)
         self.anims = obj.anims[len_before:]
 
     def mousePressEvent(self, event):
@@ -203,12 +212,6 @@ class TimelineClip(QGraphicsRectItem):
             self.obj_label.setPos(self.rect().x()+5,self.obj_label.pos().y())
         else:
             super().mouseMoveEvent(event)
-
-    def row_to_y(self, row):
-        return self.timeline.top_margin + row * self.timeline.row_height
-
-    def y_to_row(self, y):
-        return int(round((y - self.timeline.top_margin) / self.timeline.row_height))
     
     def hoverMoveEvent(self, event):
         x = event.pos().x()
@@ -234,8 +237,8 @@ class TimelineClip(QGraphicsRectItem):
                 min(new_pos.x(), self.timeline.timeline_width - self.rect().width())
             )
 
-            row = max(0, min(NUM_ROWS - 1, self.y_to_row(new_pos.y())))
-            y = self.row_to_y(row)
+            row = max(0, min(NUM_ROWS - 1, self.timeline.y_to_row(new_pos.y())))
+            y = self.timeline.row_to_y(row)
 
             proposed_pos = QPointF(x, y)
 
@@ -423,7 +426,7 @@ class ClipSettingsDialog(QDialog):
             self.clip.plot_object = new_plot_object
             
             if was_none:
-                self.clip.add_plot_object(self.clip.name,self.clip.pos().x())
+                self.clip.add_plot_object(self.clip.name,self.clip.pos().x(),self.clip.rect().width())
             elif self.clip.plot_object is not None:
                 self.clip.plot_object['object'].anims += self.clip.anims
         
@@ -619,6 +622,8 @@ class ClipSettingsDialog(QDialog):
             self.end_x = QLineEdit()
             self.end_x.setText(str(ends))
             form.addRow("End values", self.end_x)
+        elif type == 'Draw':
+            pass
 
         self.easing = QComboBox()
         self.easing.addItems(easings.available_easings)
@@ -768,6 +773,7 @@ class TimelineResizeHandle(QGraphicsRectItem):
         if self._dragging:
             dx = event.scenePos().x() - self._start_x
             new_width = max(max(self._orig_width + dx, MIN_TIMELINE_WIDTH),self.timeline.rightmost_clip)
+            #new_width = max(max(event.scenePos().x(),MIN_TIMELINE_WIDTH),self.timeline.rightmost_clip)
             self.timeline.set_timeline_width(new_width)
             self.setX(new_width + self.margin)
             self.setY(0)
@@ -906,9 +912,9 @@ class TimelineView(QGraphicsView):
         
         for item in self.scene_obj.items():
             if isinstance(item, TimelineClip):
-                row = item.y_to_row(item.pos().y())
+                row = self.y_to_row(item.pos().y())
                 item.setRect(0, 0, item.rect().width(), self.row_height)
-                item.setPos(item.pos().x(), item.row_to_y(row))
+                item.setPos(item.pos().x(), self.row_to_y(row))
         self.time_pin.timeline_width = width
     
     def resizeEvent(self, event):
@@ -930,19 +936,17 @@ class TimelineView(QGraphicsView):
 
         for item in self.scene_obj.items():
             if isinstance(item, TimelineClip):
-                row = item.y_to_row(item.pos().y())
+                row = self.y_to_row(item.pos().y())
                 item.setRect(0,0,item.rect().width(),self.row_height)
-                item.setPos(item.pos().x(), item.row_to_y(row))
+                item.setPos(item.pos().x(), self.row_to_y(row))
         super().resizeEvent(event)
 
     def compute_rightmost_clip(self):
         self.rightmost_clip = 0
         for clip in self.scene_obj.items():
-            print(clip.pos())
             if isinstance(clip, TimelineClip):
-                if clip.pos().x()+CLIP_WIDTH > self.rightmost_clip:
-                    self.rightmost_clip = clip.pos().x()+CLIP_WIDTH
-        print(self.rightmost_clip)
+                if clip.pos().x()+clip.rect().width() > self.rightmost_clip:
+                    self.rightmost_clip = clip.pos().x()+clip.rect().width()
 
     def draw_row_lines(self):
         if len(self.row_lines) == 0:
@@ -993,6 +997,12 @@ class TimelineView(QGraphicsView):
 
     def on_loop(self):
         self.loop = not self.loop
+
+    def row_to_y(self, row):
+        return self.top_margin + row * self.row_height
+
+    def y_to_row(self, y):
+        return int(round((y - self.top_margin) / self.row_height))
 
     def change_speed(self):
         speed = self.window.play_controls.btn_speed.text()[1:]
@@ -1077,16 +1087,10 @@ class TimelineView(QGraphicsView):
         row = max(0, min(self.num_rows - 1, int((scene_pos.y() - self.top_margin) / self.row_height)))
         x = max(LEFT_MARGIN, min(scene_pos.x() - CLIP_WIDTH/2, self.timeline_width))
         clip_name = event.mimeData().text()
-        color = '#999999'
-        for i in range(self.window.list_widget.count()):
-            item = self.window.list_widget.item(i)
-            if item.text() == clip_name:
-                color = item.background().color().name()
-                break
 
-        clip = TimelineClip(self, x, row, clip_name, color)
+        clip = TimelineClip(self, x, row, clip_name)
         rect = QRectF(
-            x, clip.row_to_y(row),
+            x, self.row_to_y(row),
             clip.rect().width(), clip.rect().height()
         )
         if not self.check_overlap(clip, rect):
@@ -1271,6 +1275,7 @@ class PlayControls(QWidget):
     saveVideo = Signal()
     clear = Signal(int)
     speed = Signal()
+    saveProject = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1330,6 +1335,10 @@ class PlayControls(QWidget):
         self.btn_save_video.setToolTip("Save video")
         self.btn_save_video.clicked.connect(self.saveVideo.emit)
 
+        self.btn_save_project = QPushButton('↓')
+        self.btn_save_project.setToolTip("Save project")
+        self.btn_save_project.clicked.connect(self.saveProject.emit)
+
         self.btn_clear = QPushButton('⊗')
         self.btn_clear.setToolTip("Clear rendered frames")
         self.btn_clear.clicked.connect(lambda: self.clear.emit(0))
@@ -1341,7 +1350,7 @@ class PlayControls(QWidget):
         size = 36
         for btn in (self.btn_start, self.btn_back, self.btn_play,
                     self.btn_forward, self.btn_end, self.btn_loop,
-                    self.btn_save_video, self.btn_clear, self.btn_speed):
+                    self.btn_save_video, self.btn_save_project, self.btn_clear, self.btn_speed):
             btn.setFixedSize(size, size)
             btn.setFocusPolicy(Qt.NoFocus)
 
@@ -1366,6 +1375,7 @@ class PlayControls(QWidget):
         layout.addWidget(spacer)
 
         layout.addWidget(self.btn_save_video)
+        layout.addWidget(self.btn_save_project)
 
         layout.addStretch(1)
 
@@ -1385,10 +1395,10 @@ class PlayControls(QWidget):
 # Main Window
 # -----------------------------
 class MainWindow(QWidget):
-    def __init__(self):
+    def __init__(self,GUI):
         super().__init__()
         self.timeline = None
-        self.GUI = None
+        self.GUI = GUI
         self.setWindowTitle("Diplotocus GUI")
 
         layout = QVBoxLayout(self)
@@ -1396,8 +1406,10 @@ class MainWindow(QWidget):
         splitter = QSplitter(Qt.Vertical)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.base_path = '/Users/titanbin/Desktop/Python/Diplotocus/Unnamed/Unnamed_{}.png'
+        full_path = os.path.dirname(os.path.abspath(__file__))
+        self.base_path = GUI.seq.full_path + '/Unnamed/Unnamed_{}.png'
         self.preview = PreviewWidget(self.base_path,self)
+        self.preview.load_image(full_path + '/logo_bg.png')
         self.preview.setMinimumHeight(200)
         self.preview.setMaximumHeight(800)
         splitter.addWidget(self.preview)
@@ -1429,7 +1441,7 @@ class MainWindow(QWidget):
         self.list_widget.addItem(PaletteListItem("Scale",color='#F5A623'))
         self.list_widget.addItem(PaletteListItem("Tween",color='#1CC4B6'))
         self.list_widget.addItem(PaletteListItem("Morph",color='#A14DA0'))
-        self.list_widget.addItem(PaletteListItem("Spawn",color="#44913F"))
+        self.list_widget.addItem(PaletteListItem("Draw",color="#44913F"))
         self.list_widget.setDragEnabled(True)
         self.list_widget.setFixedWidth(80)
 
@@ -1515,15 +1527,34 @@ class GUI():
         self.app = QApplication()
         self.seq = seq
         self.plot_objects = plot_objects
-        self.window = MainWindow()
-        self.window.GUI = self
+        self.window = MainWindow(GUI=self)
         self.window.resize(1000, 800)
-        self.app.setWindowIcon(QIcon("/Users/titanbin/Desktop/Python/Diplotocus/diplotocus/logo.png"))
+        full_path = os.path.dirname(os.path.abspath(__file__))
+        self.app.setWindowIcon(QIcon(full_path+"/logo.png"))
         #screen_geometry = self.app.primaryScreen().availableGeometry()
         #x = (screen_geometry.width() - self.window.width()) // 2
         #y = (screen_geometry.height() - self.window.height()) // 2
         #self.window.move(x, y)
         self.window.showMaximized()
+        self.load_anims()
+
+    def load_anims(self):
+        for obj in self.plot_objects:
+            for anim in obj['object'].anims:
+                name = anim['name'].capitalize()
+                for row in range(3):
+                    rect = QRectF(
+                        anim['delay'], self.window.timeline.row_to_y(row),
+                        anim['duration'], self.window.timeline.row_height
+                    )
+                    if self.window.timeline.check_overlap(None,rect) == False:
+                        clip = TimelineClip(self.window.timeline,anim['delay'],row,name,width=anim['duration'],open_settings=False)
+                        clip.plot_object = obj
+                        clip.setRect(QRectF(clip.rect().left(),clip.rect().top(),anim['duration'],clip.rect().height()))
+                        clip.anims = [anim]
+                        clip.update_labels()
+                        self.window.timeline.scene_obj.addItem(clip)
+                        break
 
     def add_plot_objects(self,new_plot_objects):
         if not isinstance(new_plot_objects,list):
@@ -1532,6 +1563,17 @@ class GUI():
 
     def open(self):
         sys.exit(self.app.exec())
+
+    def save_project(self):
+        dialog = QFileDialog(self, "Save file")
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, False)
+        if dialog.exec():
+            filename = dialog.selectedFiles()[0]
+            if filename.split('.')[-1] == 'dpl':
+                self.window.GUI.seq.save_video(path=filename,clean=False)
+            else:
+                self.window.GUI.seq.save_video(clean=False)
 
 TIMELINE_WIDTH = 1000
 MIN_TIMELINE_WIDTH = 50
