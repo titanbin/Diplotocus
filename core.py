@@ -121,7 +121,7 @@ class Sequence:
             animations = (animations,)
 
         for animation in animations:
-            if animation.obj is not None and animation.x_min <= x < animation.x_max:
+            if animation.obj is not None and ((animation.x_min <= x < animation.x_max) or (x >= animation.x_max and animation.persistent == False)):
                 objects = np.ravel(animation.obj)
                 for obj in objects:
                     try:
@@ -137,7 +137,29 @@ class Sequence:
                     animation.easing = self.easing
                 else:
                     animation.easing = easing
-            animation.apply(x)
+            #only plot if within an anim or if last one is persistent
+            last_anim = None
+            closest_dist = np.inf
+            for anim in animation.anims:
+                anim_x_max = anim['duration']+anim['delay']
+                if anim_x_max > x:
+                    continue
+                dist = x - anim_x_max
+                if dist < closest_dist:
+                    closest_dist = dist
+                    last_anim = anim
+            is_within_anim = False
+            if last_anim is not None:
+                is_within_anim = last_anim['persistent'] == True
+            if is_within_anim == False:
+                for anim in animation.anims:
+                    anim_x_min = anim['delay']
+                    anim_x_max = anim['duration']+anim['delay']
+                    if anim_x_min <= x < anim_x_max:
+                        is_within_anim = True
+                        break
+            if is_within_anim:
+                animation.apply(x)
         prev_x = self.x
         self.x = x
         self.save_plot(debug)
@@ -169,12 +191,9 @@ class Sequence:
             loop = tqdm(loop)
 
         for x in loop:
-            for animation in animations:
-                animation.apply(x)
-            self.save_plot(debug)
-            for animation in animations:
-                animation.clean(x)
-        
+            self.plot(animations=animations,x=x,easing=easing,debug=debug)
+        self.x = x_max
+
     def wait(self,duration):
         old_x = self.x
         for i in range(duration):
@@ -259,3 +278,7 @@ class Sequence:
 #depending on the anim xmin and xmax (delay and duration).
 
 #TODO : save and load files.
+
+#TODO : check in between animations of same plot object, if no anim and not persistent, should not plot
+
+#TODO : add rows and when resizing timeline height, fix jumps between rows

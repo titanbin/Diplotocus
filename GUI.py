@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QListWidget, QGraphicsView,QGraphicsTextItem,
     QGraphicsScene, QGraphicsRectItem, QHBoxLayout, QVBoxLayout, QGraphicsLineItem,
     QLabel, QSizePolicy,QSplitter, QPushButton, QDialog, QLineEdit, QFormLayout, QComboBox, QListWidgetItem,
-    QGraphicsItem, QFileDialog
+    QGraphicsItem, QFileDialog,QCheckBox
 )
 from PySide6.QtCore import Qt, QPointF, QRectF, Signal, QObject, QMimeData, QEvent, QTimer, Slot, QThread, QSize, QPoint
 from PySide6.QtGui import QBrush, QColor, QPen, QPixmap, QDrag, QIcon, QKeySequence, QShortcut, QGuiApplication, QFontMetrics, QFont, QPainter, QPainterPath
@@ -515,11 +515,21 @@ class ClipSettingsDialog(QDialog):
                             'easing':new_easing,
                             'property':property,
                             'start':start,
-                            'end':end
+                            'end':end,
+                            'persistent':self.persistent.isChecked()
                         }
                         len_before = len(self.clip.plot_object['object'].anims)
                         self.clip.plot_object['object'].anims.append(new_anim)
                         self.clip.anims += self.clip.plot_object['object'].anims[len_before:]
+
+        if self.clip.plot_object is not None:
+            for i,anim in enumerate(self.clip.anims):
+                    anim_i = self.clip.plot_object['object'].anims.index(anim)
+                    prop = self.clip.plot_object['object'].anims[anim_i]
+                    was_persistent = prop['persistent']
+                    if was_persistent != self.persistent.isChecked():
+                        to_derender = True
+                        prop['persistent'] = self.persistent.isChecked()
 
         self.clip.update_labels()
         
@@ -655,6 +665,17 @@ class ClipSettingsDialog(QDialog):
             self.plot_object.setCurrentIndex(index)
 
         form.addRow('Object',self.plot_object)
+
+        self.persistent = QCheckBox()
+        
+        if self.clip.plot_object is not None:
+            anim_i = self.clip.plot_object['object'].anims.index(self.clip.anims[0])
+            prop = self.clip.plot_object['object'].anims[anim_i]
+            self.persistent.setChecked(prop['persistent'])
+        else:
+            self.persistent.setChecked(True)
+
+        form.addRow('Persistent',self.persistent)
 
         self.main_layout.addLayout(form)
 
