@@ -1497,6 +1497,7 @@ class MainWindow(QWidget):
         self.play_controls.saveVideo.connect(self.timeline.save_video)
         self.play_controls.clear.connect(self.timeline.derender_frames)
         self.play_controls.speed.connect(self.timeline.change_speed)
+        self.play_controls.saveProject.connect(self.GUI.save_project)
 
         controls_layout.addWidget(bottom_widget)
         splitter.addWidget(controls_widget)
@@ -1586,15 +1587,12 @@ class GUI():
         sys.exit(self.app.exec())
 
     def save_project(self):
-        dialog = QFileDialog(self, "Save file")
+        dialog = QFileDialog(self.window, "Save file")
         dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         dialog.setOption(QFileDialog.Option.DontUseNativeDialog, False)
         if dialog.exec():
             filename = dialog.selectedFiles()[0]
-            if filename.split('.')[-1] == 'dpl':
-                self.window.GUI.seq.save_video(path=filename,clean=False)
-            else:
-                self.window.GUI.seq.save_video(clean=False)
+            self.window.GUI.seq.save_project(filename)
 
 TIMELINE_WIDTH = 1000
 MIN_TIMELINE_WIDTH = 50
