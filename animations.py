@@ -163,16 +163,17 @@ class Animation:
             t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
             if t < 0 or t > 1:
                 continue
-            i_max = len(self.x)
+            i_max = -1
             if anim['name'] == 'draw':
                 i_max = min(round(t*len(self.x)) + 1,len(self.x))
-            if anim['name'] == 'erase':
+            elif anim['name'] == 'erase':
                 i_max = max(round((1-t)*len(self.x)),0)
-            data_x = self.x[:i_max]
-            if self.y is not None:
-                data_y = self.y[:i_max]
-            if 'c' in kwargs and isinstance(kwargs['c'],(list,np.ndarray)):
-                kwargs['c'] = kwargs['c'][:i_max]
+            if i_max > 0:
+                data_x = self.x[:i_max]
+                if self.y is not None:
+                    data_y = self.y[:i_max]
+                if 'c' in kwargs and isinstance(kwargs['c'],(list,np.ndarray)):
+                    kwargs['c'] = kwargs['c'][:i_max]
 
         #Third pass to morph or demorph
         for anim in self.anims:
@@ -551,7 +552,7 @@ class Animation:
         for anim in self.anims:
             if x < anim['delay']:
                 continue
-            _x = min(x,anim['duration'] + anim['delay'])
+            _x = min(x,anim['duration'] + anim['delay']-1)
             if anim['easing'] is None:
                 anim['easing'] = self.easing
             t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
