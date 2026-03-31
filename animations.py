@@ -44,6 +44,7 @@ class Animation:
     """
     def __init__(self,easing=None,axis=None,**kwargs):
         self.anims = []
+        self.sequence = None
         self.set_easing(easing)
         self.compute_timings()
         self.set_axis(axis)
@@ -72,6 +73,9 @@ class Animation:
             self.kwargs['alpha'] = 1
 
     def function(self):
+        pass
+
+    def init(self):
         pass
 
     def get_alias_map(self):
@@ -114,6 +118,8 @@ class Animation:
 
     def set_axis(self,axis):
         self.axis = axis
+        if self.axis is None and self.sequence is not None:
+            self.set_axis(self.sequence.main_axis)
         return self
 
     def set_duration(self,duration):
@@ -206,9 +212,18 @@ class Animation:
         if self.function is not None:
             self.function(data_x,data_y,x,kwargs)
 
-    def initialize(self):
+    def initialize(self,sequence):
+        self.sequence = sequence
+        if self.axis is None:
+            self.set_axis(self.sequence.main_axis)
+        if self.easing == None:
+            if self.sequence.easing is None:
+                self.easing = self.easing
+            else:
+                self.easing = self.sequence.easing
         self.clean(0)
         self.compute_timings()
+        self.init()
 
     def compute_timings(self):
         x_max = 0
@@ -623,54 +638,39 @@ class axis_zoom(Animation):
     Zoom 2 times in 100 frames:
         >>> axis_zoom(zoom=2,duration=100)
     """
-    def __init__(self,zoom, *args, **kwargs):
+    def __init__(self,zoom,duration,delay=0,easing=easings.easeLinear(),*args,**kwargs):
         super().__init__(*args, **kwargs)
-        self.zoom = 1/zoom
+        self.anims = [{
+            'name':'axis_move',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'persistent':True,
+            'zoom':zoom
+        }]
+        self.compute_timings()
 
-    def reverse(self):
-        super().reverse()
-        self.zoom = 1/self.zoom
-        return self
+    def init(self):
+        if 'start_width' not in self.anims[0]:
+            self.anims[0]['start_width'] = self.axis.get_xlim()[1] - self.axis.get_xlim()[0]
+            self.anims[0]['start_height'] = self.axis.get_ylim()[1] - self.axis.get_ylim()[0]
+            self.anims[0]['end_width'] = self.anims[0]['start_width']*self.anims[0]['zoom']
+            self.anims[0]['end_height'] = self.anims[0]['start_height']*self.anims[0]['zoom']
 
-    def function(self,x,kwargs):
-        if x == self.x_min:
-            self.width_init  = self.axis.get_xlim()[1]-self.axis.get_xlim()[0]
-            self.height_init = self.axis.get_ylim()[1]-self.axis.get_ylim()[0]
-            self.width_end = self.width_init * self.zoom
-            self.height_end = self.height_init * self.zoom
-        
+    def function(self,data_x,data_y,x,kwargs):
+        anim = self.anims[0]
+        if x < anim['delay']:
+            return
+        _x = min(x,anim['duration'] + anim['delay']-1)
+        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+    
         center = ((self.axis.get_xlim()[1]+self.axis.get_xlim()[0])/2,(self.axis.get_ylim()[1]+self.axis.get_ylim()[0])/2)
-        width = self.width_init + (self.width_end - self.width_init)*t
-        height = self.height_init + (self.height_end - self.height_init)*t
+        width = anim['start_width'] + (anim['end_width'] - anim['start_width'])*t
+        height = anim['start_height'] + (anim['end_height'] - anim['start_height'])*t
         x_range = (center[0] - width/2, center[0] + width/2)
         y_range = (center[1] - height/2, center[1] + height/2)
         self.axis.set_xlim(x_range[0],x_range[1])
         self.axis.set_ylim(y_range[0],y_range[1])
-
-class axis(Animation):
-    def __init__(self,axis=None):
-        super().__init__(axis=axis)        
-
-    def function(self,data_x,data_y,x,kwargs):
-        alpha = kwargs['alpha']
-        for artist in self.axis.get_children():
-            try:
-                artist.set_alpha(alpha)#TODO : should multiply by artist alpha value
-            except AttributeError:
-                pass
-        self.axis.patch.set_alpha(alpha)
-        self.axis.xaxis.label.set_alpha(alpha)
-        self.axis.yaxis.label.set_alpha(alpha)
-        for label in self.axis.get_xticklabels():
-            label.set_alpha(alpha)
-        for label in self.axis.get_yticklabels():
-            label.set_alpha(alpha)
-        for tick in self.axis.xaxis.get_major_ticks():
-            tick.tick1line.set_alpha(alpha)
-            tick.tick2line.set_alpha(alpha)
-        for tick in self.axis.yaxis.get_major_ticks():
-            tick.tick1line.set_alpha(alpha)
-            tick.tick2line.set_alpha(alpha)
 
 class axis_limits(Animation):
     """
@@ -696,32 +696,41 @@ class axis_limits(Animation):
     Reframe x-axis to limits [0-2] in 100 frames:
         >>> axis_limits(xlim=(0,2),duration=100)
     """
-    def __init__(self,xlim=None,ylim=None, *args, **kwargs):
+    def __init__(self,duration,xlim=None,ylim=None,delay=0,easing=easings.easeLinear(),*args,**kwargs):
         if xlim is None and ylim is None:
             raise ValueError('Both xlim and ylim cannot be empty.')
         super().__init__(*args, **kwargs)
-        self.xlim = xlim
-        self.ylim = ylim
+        self.anims = [{
+            'name':'axis_move',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'persistent':True,
+            'xlim':xlim,
+            'ylim':ylim
+        }]
+        self.compute_timings()
 
-    def function(self,x,kwargs):
-        if x == self.x_min:
-            self.xlim_init = self.axis.get_xlim()
-            self.ylim_init = self.axis.get_ylim()
-            if self.xlim is not None:
-                self.xlim_end = self.xlim
-            else:
-                self.xlim_end = self.xlim_init
-            if self.ylim is not None:
-                self.ylim_end = self.ylim
-            else:
-                self.ylim_end = self.ylim_init
-        
-        xlim_left   = self.xlim_init[0] + (self.xlim_end[0] - self.xlim_init[0])*t
-        xlim_right  = self.xlim_init[1] + (self.xlim_end[1] - self.xlim_init[1])*t
-        ylim_bottom = self.ylim_init[0] + (self.ylim_end[0] - self.ylim_init[0])*t
-        ylim_top    = self.ylim_init[1] + (self.ylim_end[1] - self.ylim_init[1])*t
-        self.axis.set_xlim(xlim_left,xlim_right)
-        self.axis.set_ylim(ylim_bottom,ylim_top)
+    def init(self):
+        if 'start_xlim' not in self.anims[0]:
+            self.anims[0]['start_xlim'] = self.axis.get_xlim()
+            self.anims[0]['start_ylim'] = self.axis.get_ylim()
+
+    def function(self,data_x,data_y,x,kwargs):
+        anim = self.anims[0]
+        if x < anim['delay']:
+            return
+        _x = min(x,anim['duration'] + anim['delay']-1)
+        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+
+        if anim['xlim'] is not None:
+            xlim_left   = anim['start_xlim'][0] + (anim['xlim'][0] - anim['start_xlim'][0])*t
+            xlim_right  = anim['start_xlim'][1] + (anim['xlim'][1] - anim['start_xlim'][1])*t
+            self.axis.set_xlim(xlim_left,xlim_right)
+        if anim['ylim'] is not None:
+            ylim_bottom = anim['start_ylim'][0] + (anim['ylim'][0] - anim['start_ylim'][0])*t
+            ylim_top    = anim['start_ylim'][1] + (anim['ylim'][1] - anim['start_ylim'][1])*t
+            self.axis.set_ylim(ylim_bottom,ylim_top)
 
 class axis_move(Animation):
     """
@@ -745,28 +754,152 @@ class axis_move(Animation):
     Recenter the axis to (-1,-1) in 100 frames:
         >>> axis_move(pos=(-1,-1),duration=100)
     """
-    def __init__(self,pos, *args, **kwargs):
+    def __init__(self,end_pos,duration,start_pos=None,delay=0,easing=easings.easeLinear(),*args,**kwargs):
         super().__init__(*args, **kwargs)
-        self.pos = pos
+        self.anims = [{
+            'name':'axis_move',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'persistent':True,
+            'start':start_pos,
+            'end':end_pos
+        }]
+        self.compute_timings()
 
-    def reverse(self):
-        super().reverse()
-        self.pos = self.pos_init
-        return self
+    def init(self):
+        if self.anims[0]['start'] == None:
+            self.anims[0]['start'] = [
+                (self.axis.get_xlim()[0]+self.axis.get_xlim()[1])/2,
+                (self.axis.get_ylim()[0]+self.axis.get_ylim()[1])/2,
+            ]
 
-    def function(self,x,kwargs):
-        if x == self.x_min:
-            width  = self.axis.get_xlim()[1]-self.axis.get_xlim()[0]
-            height = self.axis.get_ylim()[1]-self.axis.get_ylim()[0]
-            self.pos_init = (self.axis.get_xlim()[0]+width/2,self.axis.get_ylim()[0]+height/2)
-            self.pos_end = self.pos
-        
+    def function(self,data_x,data_y,x,kwargs):
+        anim = self.anims[0]
+        if x < anim['delay']:
+            return
+        _x = min(x,anim['duration'] + anim['delay']-1)
+        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
         width  = self.axis.get_xlim()[1]-self.axis.get_xlim()[0]
         height = self.axis.get_ylim()[1]-self.axis.get_ylim()[0]
-        pos_x = self.pos_init[0] + (self.pos_end[0] - self.pos_init[0])*t
-        pos_y = self.pos_init[1] + (self.pos_end[1] - self.pos_init[1])*t
+        pos_x = anim['start'][0] + (anim['end'][0] - anim['start'][0])*t
+        pos_y = anim['start'][1] + (anim['end'][1] - anim['start'][1])*t
         self.axis.set_xlim(pos_x-width/2,pos_x+width/2)
         self.axis.set_ylim(pos_y-height/2,pos_y+height/2)
+
+class fig_width_ratio(Animation):
+    """
+    Resize subplots' widths.
+
+    Parameters
+    ----------
+    start_widths : array-like
+        Starting width ratios
+    end_widths : array-like
+        End width ratios
+    duration : float
+        Duration of the animation
+    delay : float, default=0
+        Delay before starting
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
+
+    Example
+    --------
+    Resize 2 subplots from equal widths to a ratio of 2:1 in 100 frames:
+        >>> fig_width_ratio(start_widths=(1,1),end_widths=(1,2),duration=100)
+    """
+    def __init__(self,start_widths,end_widths,duration,delay=0,easing=easings.easeLinear(),*args,**kwargs):
+        super().__init__(*args, **kwargs)
+        self.grid = None
+        start_widths = np.ravel(start_widths)
+        end_widths = np.ravel(end_widths)
+        self.anims = [{
+            'name':'axis_move',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'persistent':True,
+            'start':start_widths,
+            'end':end_widths
+        }]
+        self.compute_timings()
+
+    def init(self):
+        if self.sequence.fig.get_layout_engine() is None:
+            self.sequence.fig.set_layout_engine('constrained')
+        if self.grid == None:
+            self.grid = self.axis.get_gridspec()
+
+    def function(self,data_x,data_y,x,kwargs):
+        anim = self.anims[0]
+        if x < anim['delay']:
+            return
+        _x = min(x,anim['duration'] + anim['delay']-1)
+        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+        
+        widths = anim['start'] + (anim['end'] - anim['start'])*t
+        
+        self.grid.set_width_ratios(widths)
+
+class fig_height_ratio(Animation):
+    """
+    Resize subplots' heights.
+
+    Parameters
+    ----------
+    start_heights : array-like
+        Starting height ratios
+    end_heights : array-like
+        End height ratios
+    duration : float
+        Duration of the animation
+    delay : float, default=0
+        Delay before starting
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
+
+    Example
+    --------
+    Resize 2 subplots from equal heights to a ratio of 2:1 in 100 frames:
+        >>> fig_width_ratio(start_heights=(1,1),end_heights=(1,2),duration=100)
+    """
+    def __init__(self,start_heights,end_heights,duration,delay=0,easing=easings.easeLinear(),*args,**kwargs):
+        super().__init__(*args, **kwargs)
+        self.grid = None
+        start_heights = np.ravel(start_heights)
+        end_heights = np.ravel(end_heights)
+        self.anims = [{
+            'name':'axis_move',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'persistent':True,
+            'start':start_heights,
+            'end':end_heights
+        }]
+        self.compute_timings()
+
+    def init(self):
+        if self.sequence.fig.get_layout_engine() is None:
+            self.sequence.fig.set_layout_engine('constrained')
+        if self.grid == None:
+            self.grid = self.axis.get_gridspec()
+
+    def function(self,data_x,data_y,x,kwargs):
+        anim = self.anims[0]
+        if x < anim['delay']:
+            return
+        _x = min(x,anim['duration'] + anim['delay']-1)
+        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+        
+        heights = anim['start'] + (anim['end'] - anim['start'])*t
+        
+        self.grid.set_height_ratios(heights)
 
 class scatter(Animation):
     """

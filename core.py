@@ -76,8 +76,9 @@ class Sequence:
         self.sequence_str = ''
         self.transparent = transparent
         self.animations = []
-        namespace = sys._getframe(1).f_globals['__file__']
-        self.full_path = '/'.join(namespace.split('/')[:-1])
+        if in_notebook() == False:
+            namespace = sys._getframe(1).f_globals['__file__']
+            self.full_path = '/'.join(namespace.split('/')[:-1])
         if white:
             self.set_white()
         if noaxis:
@@ -129,14 +130,7 @@ class Sequence:
                     except:
                         pass
             
-            if animation.axis is None:
-                animation.set_axis(self.main_axis)
-            animation.initialize()
-            if animation.easing == None:
-                if easing is None:
-                    animation.easing = self.easing
-                else:
-                    animation.easing = easing
+            animation.initialize(self)
             #only plot if within an anim or if last one is persistent
             last_anim = None
             closest_dist = np.inf
@@ -176,7 +170,7 @@ class Sequence:
         for animation in animations:
             if animation.axis is None:
                 animation.set_axis(self.main_axis)
-            animation.initialize()
+            animation.initialize(self)
             if animation.easing == None:
                 if easing is None:
                     animation.easing = self.easing
