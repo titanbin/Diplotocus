@@ -44,7 +44,7 @@ class Animation:
     """
     def __init__(self,easing=None,axis=None,**kwargs):
         self.anims = []
-        self.sequence = None
+        self.seq = None
         self.set_easing(easing)
         self.compute_timings()
         self.set_axis(axis)
@@ -118,8 +118,8 @@ class Animation:
 
     def set_axis(self,axis):
         self.axis = axis
-        if self.axis is None and self.sequence is not None:
-            self.set_axis(self.sequence.main_axis)
+        if self.axis is None and self.seq is not None:
+            self.set_axis(self.seq.main_axis)
         return self
 
     def set_duration(self,duration):
@@ -151,43 +151,63 @@ class Animation:
         self.check_transforms(x)
 
     def anim_function(self,x,kwargs):
-        data_x = self.x
-        data_y = self.y
+        data_x = np.ravel(self.x)
+        data_y = np.ravel(self.y)
 
-        #First pass to handle axis animations
+        #First pass to get frame if sequencing
         for anim in self.anims:
-            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
-            if t < 0 or t > 1:
+            if anim['name'] != 'sequence':
                 continue
-            if anim['name'] == 'axis_alpha':
-                kwargs['alpha'] = t
-
-        #Second pass to cut points if drawing or erasing
-        for anim in self.anims:
             if self.x is None:
                 continue
-            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
+            t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
             if t < 0 or t > 1:
                 continue
-            i_max = -1
+
+            if len(data_x.shape) == 1:
+                data_x = data_x.reshape((-1,1))
+                data_y = data_y.reshape((-1,1))
+            
+            _i = min(round(t*len(data_x)) + 1,len(data_x)-1)
+            data_x = data_x[_i]
+            data_y = data_y[_i]
+
+
+        #Second pass to cut points if drawing or erasing
+        i_max = -1
+        for anim in self.anims:
+            if anim['name'] not in ['draw','erase']:
+                continue
+            if self.x is None:
+                continue
+            t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
+            if t < 0 or t > 1:
+                continue
+            if 'alpha' in kwargs:
+                alpha = np.ravel(kwargs['alpha'])
+                if np.sum(alpha) == 0:
+                    kwargs['alpha'] = 1
+
             if anim['name'] == 'draw':
-                i_max = min(round(t*len(self.x)) + 1,len(self.x))
+                i_max = min(round(t*len(data_x)) + 1,len(data_x))
             elif anim['name'] == 'erase':
-                i_max = max(round((1-t)*len(self.x)),0)
-            if i_max > 0:
-                data_x = self.x[:i_max]
-                if self.y is not None:
-                    data_y = self.y[:i_max]
-                if 'c' in kwargs and isinstance(kwargs['c'],(list,np.ndarray)):
-                    kwargs['c'] = kwargs['c'][:i_max]
+                i_max = max(round((1-t)*len(data_x)),0)
+            break
+        
+        if i_max > 0:
+            data_x = data_x[:i_max]
+            if data_y is not None:
+                data_y = data_y[:i_max]
+            if 'c' in kwargs and isinstance(kwargs['c'],(list,np.ndarray)):
+                kwargs['c'] = kwargs['c'][:i_max]
 
         #Third pass to morph or demorph
         for anim in self.anims:
+            if anim['name'] not in ['morph','demorph']:
+                continue
             if self.x is None:
                 continue
-            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
-            if anim['name'] in ['translate','rotate','scale','tween']:
-                t = 1
+            t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
             if t < 0 or t > 1:
                 continue
             if data_x is None or data_y is None:
@@ -213,14 +233,14 @@ class Animation:
             self.function(data_x,data_y,x,kwargs)
 
     def initialize(self,sequence):
-        self.sequence = sequence
+        self.seq = sequence
         if self.axis is None:
-            self.set_axis(self.sequence.main_axis)
+            self.set_axis(self.seq.main_axis)
         if self.easing == None:
-            if self.sequence.easing is None:
+            if self.seq.easing is None:
                 self.easing = self.easing
             else:
-                self.easing = self.sequence.easing
+                self.easing = self.seq.easing
         self.clean(0)
         self.compute_timings()
         self.init()
@@ -274,13 +294,15 @@ class Animation:
                 continue
             if anim['name'] != 'tween':
                 continue
-            x = min(x,anim['duration'] + anim['delay'])
+            _x = min(x,anim['duration'] + anim['delay'])
             if anim['easing'] is None:
                 anim['easing'] = self.easing
-            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
+            t = anim['easing'].ease((_x-anim['delay'])/max(1,anim['duration']-1))
+            t = np.clip(t,0,1)
             start = np.ravel(anim['start'])
             end = np.ravel(anim['end'])
-            kwargs[anim['property']] = start + (end - start)*t
+            current = start + (end - start)*t
+            kwargs[anim['property']] = current
         return kwargs
 
     def show(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
@@ -447,20 +469,6 @@ class Animation:
             else:
                 o.set_transform(self.T + self.axis.transData)
 
-    def axis_alpha(self,start_alpha,end_alpha,duration,delay=0,easing=easings.easeLinear(),persistent=True):
-        self.start_alpha = start_alpha
-        self.end_alpha = end_alpha
-        
-        self.anims.append({
-            'name':'axis_alpha',
-            'duration':duration,
-            'delay':delay,
-            'easing':easing,
-            'persistent':persistent
-        })
-        self.compute_timings()
-        return self
-    
     def update(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
             'name':'update',
@@ -511,9 +519,9 @@ class Animation:
         })
         return self
     
-    def reverse(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def sequence(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
         self.anims.append({
-            'name':'reverse',
+            'name':'sequence',
             'duration':duration,
             'delay':delay,
             'easing':easing,
@@ -521,10 +529,10 @@ class Animation:
         })
         self.compute_timings()
         return self
-    
+
     def clean(self,x,clear_anims=True):
         for anim in self.anims:
-            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
+            t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
             if t != 1:
                 continue
             if anim['name'] == 'morph':
@@ -570,7 +578,7 @@ class Animation:
             _x = min(x,anim['duration'] + anim['delay']-1)
             if anim['easing'] is None:
                 anim['easing'] = self.easing
-            t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+            t = anim['easing'].ease((_x-anim['delay'])/max(1,anim['duration']-1))
             if anim['name'] == 'scale':
                 start = np.ravel(anim['start'])
                 end = np.ravel(anim['end'])
@@ -638,8 +646,8 @@ class axis_zoom(Animation):
     Zoom 2 times in 100 frames:
         >>> axis_zoom(zoom=2,duration=100)
     """
-    def __init__(self,zoom,duration,delay=0,easing=easings.easeLinear(),*args,**kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self,zoom,duration,delay=0,easing=easings.easeLinear(),axis=None,*args,**kwargs):
+        super().__init__(axis=axis,*args, **kwargs)
         self.anims = [{
             'name':'axis_move',
             'duration':duration,
@@ -696,10 +704,10 @@ class axis_limits(Animation):
     Reframe x-axis to limits [0-2] in 100 frames:
         >>> axis_limits(xlim=(0,2),duration=100)
     """
-    def __init__(self,duration,xlim=None,ylim=None,delay=0,easing=easings.easeLinear(),*args,**kwargs):
+    def __init__(self,duration,xlim=None,ylim=None,delay=0,easing=easings.easeLinear(),axis=None,*args,**kwargs):
         if xlim is None and ylim is None:
             raise ValueError('Both xlim and ylim cannot be empty.')
-        super().__init__(*args, **kwargs)
+        super().__init__(axis=axis,*args, **kwargs)
         self.anims = [{
             'name':'axis_move',
             'duration':duration,
@@ -754,8 +762,8 @@ class axis_move(Animation):
     Recenter the axis to (-1,-1) in 100 frames:
         >>> axis_move(pos=(-1,-1),duration=100)
     """
-    def __init__(self,end_pos,duration,start_pos=None,delay=0,easing=easings.easeLinear(),*args,**kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self,end_pos,duration,start_pos=None,delay=0,easing=easings.easeLinear(),axis=None,*args,**kwargs):
+        super().__init__(axis=axis,*args, **kwargs)
         self.anims = [{
             'name':'axis_move',
             'duration':duration,
@@ -787,6 +795,66 @@ class axis_move(Animation):
         self.axis.set_xlim(pos_x-width/2,pos_x+width/2)
         self.axis.set_ylim(pos_y-height/2,pos_y+height/2)
 
+class axis_alpha(Animation):
+
+    def __init__(self,start_alpha,end_alpha,duration,delay=0,easing=easings.easeLinear(),axis=None,*args,**kwargs):
+        super().__init__(axis=axis,*args, **kwargs)
+        self.anims = [{
+            'name':'axis_move',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'persistent':True,
+            'start':start_alpha,
+            'end':end_alpha
+        }]
+        self.compute_timings()
+
+    def init(self):
+        pass
+
+    def function(self,data_x,data_y,x,kwargs):
+        anim = self.anims[0]
+        if x < anim['delay']:
+            return
+        _x = min(x,anim['duration'] + anim['delay']-1)
+        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+        alpha = anim['start'] + (anim['end'] - anim['start'])*t
+        
+        self.axis.patch.set_alpha(alpha)
+
+        for spine in self.axis.spines.values():
+            spine.set_alpha(alpha)
+
+        for tick in self.axis.xaxis.get_major_ticks() + self.axis.yaxis.get_major_ticks():
+            for line in tick.tick1line, tick.tick2line:
+                line.set_alpha(alpha)
+            label = tick.label1
+            label.set_alpha(alpha)
+
+        self.axis.xaxis.label.set_alpha(alpha)
+        self.axis.yaxis.label.set_alpha(alpha)
+
+        self.axis.title.set_alpha(alpha)
+
+        for line in self.axis.get_xgridlines() + self.axis.get_ygridlines():
+            line.set_alpha(alpha)
+        for line in self.axis.lines:
+            line.set_alpha(alpha)
+        for col in self.axis.collections:
+            col.set_alpha(alpha)
+        for patch in self.axis.patches:
+            patch.set_alpha(alpha)
+        for img in self.axis.images:
+            img.set_alpha(alpha)
+        for txt in self.axis.texts:
+            txt.set_alpha(alpha)
+        leg = self.axis.get_legend()
+        if leg:
+            leg.get_frame().set_alpha(alpha)
+            for txt in leg.get_texts():
+                txt.set_alpha(alpha)
+
 class fig_width_ratio(Animation):
     """
     Resize subplots' widths.
@@ -811,11 +879,14 @@ class fig_width_ratio(Animation):
     Resize 2 subplots from equal widths to a ratio of 2:1 in 100 frames:
         >>> fig_width_ratio(start_widths=(1,1),end_widths=(1,2),duration=100)
     """
-    def __init__(self,start_widths,end_widths,duration,delay=0,easing=easings.easeLinear(),*args,**kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self,start_widths,end_widths,duration,delay=0,easing=easings.easeLinear(),axis=None,*args,**kwargs):
+        super().__init__(axis=axis,*args, **kwargs)
         self.grid = None
-        start_widths = np.ravel(start_widths)
-        end_widths = np.ravel(end_widths)
+        start_widths = np.ravel(start_widths).astype(float)
+        end_widths = np.ravel(end_widths).astype(float)
+        #Normalize the ratios so scaling with time remains linear
+        start_widths /= np.sum(start_widths)
+        end_widths /= np.sum(end_widths)
         self.anims = [{
             'name':'axis_move',
             'duration':duration,
@@ -828,8 +899,9 @@ class fig_width_ratio(Animation):
         self.compute_timings()
 
     def init(self):
-        if self.sequence.fig.get_layout_engine() is None:
-            self.sequence.fig.set_layout_engine('constrained')
+        if self.seq.fig.get_layout_engine() is None:
+            #Band-aid fix
+            self.seq.fig.set_layout_engine('tight')
         if self.grid == None:
             self.grid = self.axis.get_gridspec()
 
@@ -868,11 +940,14 @@ class fig_height_ratio(Animation):
     Resize 2 subplots from equal heights to a ratio of 2:1 in 100 frames:
         >>> fig_width_ratio(start_heights=(1,1),end_heights=(1,2),duration=100)
     """
-    def __init__(self,start_heights,end_heights,duration,delay=0,easing=easings.easeLinear(),*args,**kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self,start_heights,end_heights,duration,delay=0,easing=easings.easeLinear(),axis=None,*args,**kwargs):
+        super().__init__(axis=axis,*args, **kwargs)
         self.grid = None
         start_heights = np.ravel(start_heights)
         end_heights = np.ravel(end_heights)
+        #Normalize the ratios so scaling with time remains linear
+        start_heights /= np.sum(start_heights)
+        end_heights /= np.sum(end_heights)
         self.anims = [{
             'name':'axis_move',
             'duration':duration,
@@ -885,8 +960,9 @@ class fig_height_ratio(Animation):
         self.compute_timings()
 
     def init(self):
-        if self.sequence.fig.get_layout_engine() is None:
-            self.sequence.fig.set_layout_engine('constrained')
+        if self.seq.fig.get_layout_engine() is None:
+            #Band-aid fix
+            self.seq.fig.set_layout_engine('tight')
         if self.grid == None:
             self.grid = self.axis.get_gridspec()
 
@@ -1105,11 +1181,11 @@ class scatter(Animation):
       flattened. The exception is *c*, which will be flattened only if its
       size matches the size of *x* and *y*.
     """
-    def __init__(self,x,y, *args, **kwargs):
+    def __init__(self,x,y,easing=None,axis=None,*args,**kwargs):
         self.mpl_obj_type = mpl.collections.Collection
         self.mpl_plot_type = plt.plot
 
-        super().__init__(*args, **kwargs)
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
 
         self.x = np.ravel(x)
         self.y = np.ravel(y)
@@ -1427,10 +1503,10 @@ class plot(Animation):
     additionally use any  `matplotlib.colors` spec, e.g. full names
     (``'green'``) or hex strings (``'#008000'``).
     """
-    def __init__(self,x,y, *args, **kwargs):
+    def __init__(self,x,y,easing=None,axis=None,*args,**kwargs):
         self.mpl_obj_type = mpl.lines.Line2D
         self.mpl_plot_type = plt.plot
-        super().__init__(*args, **kwargs)
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
 
         self.x = np.ravel(x)
         self.y = np.ravel(y)

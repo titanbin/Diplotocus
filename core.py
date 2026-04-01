@@ -206,50 +206,44 @@ class Sequence:
             self.sequence_str += 'duration {}\n'.format(1/30)
         self.x += 1
     
-    def save_video(self,path=None,speed=1,multialpha=False,prerendered=False,clean=True):
+    def save_video(self,path=None,speed=1,ffmpeg_path='ffmpeg',multialpha=False,prerendered=False,clean=True):
         if path is None:
             if self.transparent:
                 path = self.name + '.mov'
             else:
                 path = self.name + '.mp4'
         video_fn = path
+        is_gif = video_fn.lower().endswith('.gif')
         if not self.quiet:
             update = status_message("Rendering video...", "Saved video " + video_fn)
         if not prerendered:
-            if False:
-                self.sequence_str += 'file \'' + self.name + '_{}.png\'\n'.format(self.x-1)#repeat last frame otherwise not seen for some reason
-                self.sequence_str += 'duration {}\n'.format(1/30)
-                with open(self.name + '/' + self.name + '.txt','w+') as f:
-                    lines = self.sequence_str.split('\n')
-                    for line in lines:
-                        if speed != 1:
-                            if 'duration' in line:
-                                line = 'duration {}'.format(float(line.split(' ')[-1])/speed)
-                        f.write(line + '\n')
-            else:
-                self.sequence_str = ''
-                for i in range(self.x):
-                    self.sequence_str += 'file \'' + self.name + '_{}.png\'\n'.format(i)
-                    self.sequence_str += 'duration {}\n'.format(1/30/speed)
+            self.sequence_str = ''
+            for i in range(self.x):
                 self.sequence_str += 'file \'' + self.name + '_{}.png\'\n'.format(i)
                 self.sequence_str += 'duration {}\n'.format(1/30/speed)
-                with open(self.name + '/' + self.name + '.txt','w+') as f:
-                    f.write(self.sequence_str)
+            self.sequence_str += 'file \'' + self.name + '_{}.png\'\n'.format(i)
+            self.sequence_str += 'duration {}\n'.format(1/30/speed)
+            with open(self.name + '/' + self.name + '.txt','w+') as f:
+                f.write(self.sequence_str)
         sequence_fn = self.name + '/' + self.name  + '.txt'
 
         if '.mov' in video_fn:
             if multialpha:
-                command = 'ffmpeg -f concat -safe 0 -i {} -y -vf premultiply=inplace=1 -c:v prores_ks -profile:v 4 -pix_fmt yuva444p10le -hide_banner -loglevel error {}'.format(sequence_fn,video_fn)
+                command = ffmpeg_path + ' -f concat -safe 0 -i {} -y -vf premultiply=inplace=1 -c:v prores_ks -profile:v 4 -pix_fmt yuva444p10le -hide_banner -loglevel error {}'.format(sequence_fn,video_fn)
             else:
-                command = 'ffmpeg -f concat -safe 0 -i {} -y -c:v prores -pix_fmt yuva444p10le -hide_banner -loglevel error {}'.format(sequence_fn,video_fn)
+                command = ffmpeg_path + ' -f concat -safe 0 -i {} -y -c:v prores -pix_fmt yuva444p10le -hide_banner -loglevel error {}'.format(sequence_fn,video_fn)
+        elif is_gif:
+            command = ffmpeg_path + ' -f concat -safe 0 -i {} -y -lavfi "split[s0][s1];[s0]palettegen=reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=sierra2_4a:alpha_threshold=128" -gifflags -offsetting -loop 0 -hide_banner -loglevel error {}'.format(sequence_fn,video_fn)
         else:
-            command = 'ffmpeg -f concat -safe 0 -i {} -c:v libx264 -pix_fmt yuv420p -c:a aac -movflags +faststart -hide_banner -loglevel error -y {}'.format(sequence_fn,video_fn)
+            command = ffmpeg_path + ' -f concat -safe 0 -i {} -c:v libx264 -pix_fmt yuv420p -c:a aac -movflags +faststart -hide_banner -loglevel error -y {}'.format(sequence_fn,video_fn)
         subprocess.run(shlex.split(command))
         if clean:
             shutil.rmtree(self.name)
         plt.close()
         if not self.quiet:
             update()
+        if is_gif:
+            return display(HTML('<img src="{}" style="max-width:640px;height:auto;" />'.format(video_fn)))
         return display(HTML("""
             <video width="640" height="360" autoplay loop muted playsinline>
             <source src="{}" type="video/mp4">
@@ -263,16 +257,10 @@ class Sequence:
 
 #TODO : implementing blitting as in https://matplotlib.org/stable/users/explain/animations/blitting.html
 #has to be an option on the sequence Class, as it can only draw objects on top of the saved background.
-
 #TODO : implement deepcopy of fig so that we can rerun the same code of Sequence without having to reinitialize the fig, because it changes in the sequence code
 #code implemented in the init of sequence, but the axes are regenerated from the copied figure, so if some anims use a specific axis, it does not exist anymore.
 #have to, as initialisation, replace the specific axis with the new one (save old axis in Sequence, find index of specific axis in old axes, get new axis using index)
-
 #TODO : update all functions past plot so that function() takes x not t, and loop over all anims and compute each t
 #depending on the anim xmin and xmax (delay and duration).
-
-#TODO : save and load files.
-
-#TODO : check in between animations of same plot object, if no anim and not persistent, should not plot
-
 #TODO : add rows and when resizing timeline height, fix jumps between rows
+#TODO : Web-based GUI instead
