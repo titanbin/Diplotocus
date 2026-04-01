@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Diplotocus Web GUI</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/x-icon" href="src/favicon.ico">
+</head>
+<body>
+  <main class="app-shell">
+    <!--
+    <header class="topbar">
+      <div class="actions">
+        <button id="loadDemo">Load Demo Project</button>
+      </div>
+    </header>
+    -->
+
+    <section class="preview-panel">
+      <img id="previewImage" alt="Preview frame" src="src/logo_bg.png" />
+      <div id="frameText"></div>
+    </section>
+
+    <div id="previewResizeHandle" title="Resize preview" aria-label="Resize preview" role="separator"></div>
+
+    <section class="timeline-controls">
+      <div class="control-gap" aria-hidden="true"></div>
+      <button id="btnClearFrames" title="Clear rendered frames" aria-label="Clear rendered frames">⊗</button>
+      <div class="control-gap" aria-hidden="true"></div>
+      <button id="btnSpeed" title="Playback speed" aria-label="Playback speed">x1</button>
+      <button id="btnToStart" title="Go to beginning" aria-label="Go to beginning">⏮</button>
+      <button id="btnPrev" title="Previous frame" aria-label="Previous frame">⇤︎</button>
+      <button id="btnPlayPause" title="Play playback" aria-label="Play">▶</button>
+      <button id="btnNext" title="Next frame" aria-label="Next frame">⇥︎</button>
+      <button id="btnToEnd" title="Go to end" aria-label="Go to end">⏭</button>
+      <button id="btnLoop" title="Loop off" aria-label="Loop off">⟳</button>
+      <div class="control-gap" aria-hidden="true"></div>
+      <button id="btnSaveVideo" title="Render timeline then save video" aria-label="Save video">⏺︎</button>
+      <button id="btnSaveProject" title="Save project" aria-label="Save project">↓</button>
+    </section>
+
+    <section class="workspace">
+      <aside class="palette">
+        <div class="palette-item" draggable="true" data-type="Translate">Translate</div>
+        <div class="palette-item" draggable="true" data-type="Rotate">Rotate</div>
+        <div class="palette-item" draggable="true" data-type="Scale">Scale</div>
+        <div class="palette-item" draggable="true" data-type="Tween">Tween</div>
+        <div class="palette-item" draggable="true" data-type="Morph">Morph</div>
+        <div class="palette-item" draggable="true" data-type="Draw">Draw</div>
+      </aside>
+
+      <section class="timeline-panel">
+        <div class="timeline-shell">
+          <div id="trackControls"></div>
+          <div class="timeline-main">
+            <div id="frameStrip"></div>
+            <div id="pinLayer">
+              <div id="timelinePin">
+                <div id="pinHandle"></div>
+              </div>
+            </div>
+            <div id="timelineViewport">
+              <div id="timeline">
+                <div id="timelineResizeHandle" title="Resize timeline"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div id="clipDialogBackdrop" class="dialog-backdrop hidden">
+    <div class="dialog">
+      <h3>Clip Properties</h3>
+      <div class="dialog-grid">
+        <label>Delay <input id="dlgDelay" type="number" step="1" /></label>
+        <label>Duration <input id="dlgDuration" type="number" step="1" min="1" /></label>
+        <label>Easing <select id="dlgEasing"></select></label>
+        <label>Object <select id="dlgObject"></select></label>
+        <label>Persistent <input id="dlgPersistent" type="checkbox" /></label>
+        <label id="dlgStartXWrap" class="prop-field">Start X <input id="dlgStartX" type="number" step="any" /></label>
+        <label id="dlgStartYWrap" class="prop-field">Start Y <input id="dlgStartY" type="number" step="any" /></label>
+        <label id="dlgEndXWrap" class="prop-field">End X <input id="dlgEndX" type="number" step="any" /></label>
+        <label id="dlgEndYWrap" class="prop-field">End Y <input id="dlgEndY" type="number" step="any" /></label>
+        <label id="dlgStartWrap" class="prop-field">Start <input id="dlgStart" type="number" step="any" /></label>
+        <label id="dlgEndWrap" class="prop-field">End <input id="dlgEnd" type="number" step="any" /></label>
+        <label id="dlgTweenPropsWrap" class="prop-field">Property names <input id="dlgTweenProps" type="text" /></label>
+        <label id="dlgTweenStartsWrap" class="prop-field">Start values <input id="dlgTweenStarts" type="text" /></label>
+        <label id="dlgTweenEndsWrap" class="prop-field">End values <input id="dlgTweenEnds" type="text" /></label>
+      </div>
+      <div class="dialog-actions">
+        <button id="dlgCancel">Cancel</button>
+        <button id="dlgSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+  <script src="app.js"></script>
+</body>
+</html>

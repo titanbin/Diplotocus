@@ -22,19 +22,13 @@ class GUI():
         for obj in self.plot_objects:
             for anim in obj['object'].anims:
                 name = anim['name'].capitalize()
-                for row in range(3):
-                    rect = QRectF(
-                        anim['delay'], self.window.timeline.row_to_y(row),
-                        anim['duration'], self.window.timeline.row_height
-                    )
-                    if self.window.timeline.check_overlap(None, rect) == False:
-                        clip = TimelineClip(self.window.timeline, anim['delay'], row, name, width=anim['duration'], open_settings=False)
-                        clip.plot_object = obj
-                        clip.setRect(QRectF(clip.rect().left(), clip.rect().top(), anim['duration'], clip.rect().height()))
-                        clip.anims = [anim]
-                        clip.update_labels()
-                        self.window.timeline.scene_obj.addItem(clip)
-                        break
+                row = self.window.timeline.find_available_row(anim['delay'], anim['duration'])
+                clip = TimelineClip(self.window.timeline, anim['delay'], row, name, width=anim['duration'], open_settings=False)
+                clip.plot_object = obj
+                clip.setRect(QRectF(clip.rect().left(), clip.rect().top(), anim['duration'], clip.rect().height()))
+                clip.anims = [anim]
+                clip.update_labels()
+                self.window.timeline.scene_obj.addItem(clip)
 
     def add_plot_objects(self, new_plot_objects):
         if not isinstance(new_plot_objects, list):

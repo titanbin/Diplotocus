@@ -1,0 +1,500 @@
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	font-family: Arial, sans-serif;
+	background: #323232;
+	color: #e4e4e4;
+}
+
+.topbar {
+	margin: 0 auto;
+	max-width: 1200px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.actions {
+	max-width: 1200px;
+	display: flex;
+	gap: 8px;
+}
+
+button {
+	border: 1px solid #656565;
+	background: #4b4b4b;
+	padding: 6px 10px;
+	cursor: pointer;
+	transition: background 0.1s ease-in-out;
+}
+
+button:hover{
+		background: #646464;
+}
+
+#previewResizeHandle {
+	height: 5px;
+	border-radius: 4px;
+	background: #4b4b4b;
+	cursor: ns-resize;
+	width: 100px;
+	margin: 0 auto;
+	margin-bottom: 10px;
+}
+
+#previewResizeHandle:hover {
+	background: #5d5d5d;
+}
+
+.timeline-controls {
+	display: flex;
+	gap: 4px;
+	justify-content: center;
+}
+
+.timeline-controls button {
+	width: 40px;
+	height: 33px;
+	font-size: 15px;
+	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: #e4e4e4;
+}
+
+.control-gap {
+	width: 14px;
+	height: 1px;
+	flex: 0 0 14px;
+}
+
+#btnLoop.active,
+#btnSaveVideo.active {
+	background: #7c7c7c;
+}
+
+#btnToStart,#btnToEnd,#btnSaveVideo{
+		font-family: math;
+		padding-bottom: 2px;
+}
+
+#btnPlayPause{
+		font-family: math;
+		font-size: 8px;
+}
+
+#btnPlayPause[aria-label="Pause"]{
+		font-family: math;
+		font-size: 16px;
+		padding-top: 10px;
+}
+
+#btnSaveVideo {
+		font-family: math;
+		padding-bottom: 2px;
+	color: #ff2e2e;
+}
+
+#btnLoop{
+		font-size: 23px;
+		padding-top: 3px;
+}
+
+#btnSaveVideo:disabled {
+	opacity: 0.7;
+	cursor: default;
+}
+
+#previewImage {
+	display: block;
+	width: 100%;
+	height: 400px;
+	max-height: none;
+	object-fit: contain;
+	pointer-events: none;
+}
+
+#frameText {
+	font-size: 14px;
+	position: absolute;
+	top: 25px;
+	left: 25px;
+	opacity: 1;
+	transition: opacity 0.35s ease;
+}
+
+#frameText.is-faded {
+	opacity: 0;
+}
+
+.workspace {
+	display: grid;
+	grid-template-columns: 100px 1fr;
+	gap: 10px;
+	background-color: #171717;
+}
+
+.palette {
+	padding: 3px;
+}
+
+.palette-item {
+	margin-bottom: 2px;
+	cursor: grab;
+	user-select: none;
+	pointer-events: all;
+	font-size: 13px;
+	font-weight: 600;
+	padding-left: 4px;
+	padding-top: 4px;
+	padding-bottom: 12px;
+	background-size: auto 150%;
+	background-position-y: 25%;
+	border-radius: 5px;
+}
+
+.palette small {
+	color: #666;
+}
+
+.timeline-panel {
+	overflow: hidden;
+}
+
+.timeline-shell {
+	display: grid;
+	grid-template-columns: 35px 1fr;
+	height: 100%;
+}
+
+#trackControls {
+	padding-top: 20px;
+	margin-right: 5px;
+}
+
+.track-control {
+	height: 52px;
+	margin-bottom: 2px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.delete-track {
+	width: 34px;
+	height: 24px;
+	padding: 0;
+	line-height: 1;
+	color: #e4e4e4;
+}
+
+.track-controls-spacer {
+	margin-top: 4px;
+	height: 28px;
+}
+
+.timeline-main {
+	min-width: 0;
+	position: relative;
+}
+
+#frameStrip {
+	position: relative;
+	height: 14px;
+	z-index: 1;
+}
+
+.frame-indicator {
+	position: absolute;
+	top: 0;
+	width: 2px;
+	height: 12px;
+	background: #0ea35b;
+}
+
+#timelineViewport {
+	position: relative;
+	overflow-x: auto;
+	padding: 8px;
+	padding-left: 0px;
+	z-index: 2;
+}
+
+#timelineResizeHandle {
+	position: absolute;
+	top: 8px;
+	left: 0;
+	width: 4px;
+	height: 40px;
+	background: #595959;
+	cursor: ew-resize;
+	z-index: 7;
+	border-radius: 5px;
+}
+
+#timelineResizeHandle:hover{
+		background: #787878;
+}
+
+#timeline {
+	position: relative;
+}
+
+.track-row {
+	position: relative;
+	height: 52px;
+	margin-bottom: 2px;
+	background: #2b2b2b;
+	font-style: italic;
+}
+
+.track-row::before {
+	content: attr(data-label);
+	position: absolute;
+	left: 6px;
+	top: 6px;
+	color: #666;
+	font-size: 12px;
+}
+
+.clip {
+	position: absolute;
+	top: 0px;
+	height: 100%;
+	border-radius: 5px;
+	background: #9bb8ff;
+	color: #e4e4e4;
+	font-weight: 600;
+	padding: 3px 6px;
+	font-size: 12px;
+	white-space: nowrap;
+	cursor: grab;
+	background-size: auto 150%;
+	background-position-y: 25%;
+	font-style: normal;
+}
+
+.clip.selected{
+		color: #c5c5c5;
+}
+
+.clip.Translate,.palette-item[data-type="Translate"]{
+		background-color: hsl(212, 72%, 59%);
+		border-bottom: 1.5px solid hsl(212, 72%, 49%);
+		border-right:  1.5px solid hsl(212, 72%, 49%);
+		border-top:    1.5px solid hsl(212, 72%, 69%);
+		border-left:   1.5px solid hsl(212, 72%, 69%);
+		background-image: url('src/btn/btn_bg_Translate.png');
+}
+
+.clip.Translate.selected{
+		background-color: hsl(212, 72%, 49%);
+		border-bottom: 1.5px solid hsl(212, 72%, 39%);
+		border-right:  1.5px solid hsl(212, 72%, 39%);
+		border-top:    1.5px solid hsl(212, 72%, 59%);
+		border-left:   1.5px solid hsl(212, 72%, 59%);
+}
+
+.clip.Rotate,.palette-item[data-type="Rotate"]{
+		background-color: hsl(338, 85%, 46%);
+		border-bottom: 1.5px solid hsl(338, 85%, 36%);
+		border-right:  1.5px solid hsl(338, 85%, 36%);
+		border-top:    1.5px solid hsl(338, 85%, 56%);
+		border-left:   1.5px solid hsl(338, 85%, 56%);
+		background-image: url('src/btn/btn_bg_Rotate.png');
+}
+
+.clip.Rotate.selected{
+		background-color: hsl(338, 85%, 36%);
+		border-bottom: 1.5px solid hsl(338, 85%, 26%);
+		border-right:  1.5px solid hsl(338, 85%, 26%);
+		border-top:    1.5px solid hsl(338, 85%, 46%);
+		border-left:   1.5px solid hsl(338, 85%, 46%);
+}
+
+.clip.Scale,.palette-item[data-type="Scale"]{
+		background-color: hsl(37, 91%, 55%);
+		border-bottom: 1.5px solid hsl(37, 91%, 45%);
+		border-right:  1.5px solid hsl(37, 91%, 45%);
+		border-top:    1.5px solid hsl(37, 91%, 65%);
+		border-left:   1.5px solid hsl(37, 91%, 65%);
+		background-image: url('src/btn/btn_bg_Scale.png');
+}
+
+.clip.Scale.selected{
+		background-color: hsl(37, 91%, 45%);
+		border-bottom: 1.5px solid hsl(37, 91%, 35%);
+		border-right:  1.5px solid hsl(37, 91%, 35%);
+		border-top:    1.5px solid hsl(37, 91%, 55%);
+		border-left:   1.5px solid hsl(37, 91%, 55%);
+}
+
+.clip.Tween,.palette-item[data-type="Tween"]{
+		background-color: hsl(175, 75%, 44%);
+		border-bottom: 1.5px solid hsl(175, 75%, 34%);
+		border-right:  1.5px solid hsl(175, 75%, 34%);
+		border-top:    1.5px solid hsl(175, 75%, 54%);
+		border-left:   1.5px solid hsl(175, 75%, 54%);
+		background-image: url('src/btn/btn_bg_Tween.png');
+}
+
+.clip.Tween.selected{
+		background-color: hsl(175, 75%, 34%);
+		border-bottom: 1.5px solid hsl(175, 75%, 24%);
+		border-right:  1.5px solid hsl(175, 75%, 24%);
+		border-top:    1.5px solid hsl(175, 75%, 44%);
+		border-left:   1.5px solid hsl(175, 75%, 44%);
+}
+
+.clip.Morph,.palette-item[data-type="Morph"]{
+		background-color: hsl(301, 35%, 47%);
+		border-bottom: 1.5px solid hsl(301, 35%, 37%);
+		border-right:  1.5px solid hsl(301, 35%, 37%);
+		border-top:    1.5px solid hsl(301, 35%, 57%);
+		border-left:   1.5px solid hsl(301, 35%, 57%);
+		background-image: url('src/btn/btn_bg_Morph.png');
+}
+
+.clip.Morph.selected{
+		background-color: hsl(301, 35%, 37%);
+		border-bottom: 1.5px solid hsl(301, 35%, 27%);
+		border-right:  1.5px solid hsl(301, 35%, 27%);
+		border-top:    1.5px solid hsl(301, 35%, 47%);
+		border-left:   1.5px solid hsl(301, 35%, 47%);
+}
+
+.clip.Draw,.palette-item[data-type="Draw"]{
+		background-color: hsl(116, 39%, 41%);
+		border-bottom: 1.5px solid hsl(116, 39%, 31%);
+		border-right:  1.5px solid hsl(116, 39%, 31%);
+		border-top:    1.5px solid hsl(116, 39%, 51%);
+		border-left:   1.5px solid hsl(116, 39%, 51%);
+		background-image: url('src/btn/btn_bg_Draw.png');
+}
+
+.clip.Draw.selected{
+		background-color: hsl(116, 39%, 31%);
+		border-bottom: 1.5px solid hsl(116, 39%, 21%);
+		border-right:  1.5px solid hsl(116, 39%, 21%);
+		border-top:    1.5px solid hsl(116, 39%, 41%);
+		border-left:   1.5px solid hsl(116, 39%, 41%);
+}
+
+.clip.resize-left,
+.clip.resize-right {
+	cursor: ew-resize;
+}
+
+.add-track {
+	margin-top: 4px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #e4e4e4;
+	background: #2b2b2b;
+	user-select: none;
+	cursor: pointer;
+}
+
+.add-track:hover{
+		background: #323232;
+}
+
+#pinLayer {
+	position: absolute;
+	left: 8px;
+	top: 22px;
+	pointer-events: none;
+	z-index: 30;
+}
+
+.dialog-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 20;
+}
+
+.dialog-backdrop.hidden {
+	display: none;
+}
+
+.dialog {
+	width: 460px;
+	max-width: calc(100vw - 24px);
+	background: #2b2b2b;
+	padding: 10px;
+	border: 2px solid #4b4b4b;
+}
+
+.dialog h3 {
+	margin: 0 0 10px;
+}
+
+.dialog-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+}
+
+.dialog-grid label {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	font-size: 12px;
+}
+
+.dialog-grid input,
+.dialog-grid select {
+	border: 1px solid #bbb;
+	padding: 5px;
+}
+
+.dialog-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 10px;
+}
+
+.dialog-actions button{
+	color: #e4e4e4;
+}
+
+#timelinePin {
+	position: absolute;
+	top: 0;
+	width: 2px;
+	background: #ff3131;
+	pointer-events: auto;
+	transform: translateX(-7px);
+	z-index: 21;
+}
+
+#pinHandle {
+	position: absolute;
+	top: -17px;
+	left: 1px;
+	transform: translateX(-50%);
+	min-width: 18px;
+	height: 17px;
+	padding: 0 4px;
+	background: #ff3131;
+	color: #fff;
+	font-size: 11px;
+	line-height: 14px;
+	text-align: center;
+	border-radius: 2px;
+	user-select: none;
+	cursor: ew-resize;
+	z-index: 22;
+}

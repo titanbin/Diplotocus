@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import (
     QColor, QBrush, QPen, QPixmap, QFontMetrics, QFont, QPainter, QPainterPath
 )
-from .constants import CLIP_WIDTH, EDGE_GRAB, MIN_CLIP_WIDTH, LEFT_MARGIN, NUM_ROWS, TOP_MARGIN
+from .constants import CLIP_WIDTH, EDGE_GRAB, MIN_CLIP_WIDTH, LEFT_MARGIN, TOP_MARGIN
 import diplotocus.easings as easings
 
 
@@ -211,7 +211,7 @@ class TimelineClip(QGraphicsRectItem):
                 min(new_pos.x(), self.timeline.timeline_width - self.rect().width())
             )
 
-            row = max(0, min(NUM_ROWS - 1, self.timeline.y_to_row(new_pos.y())))
+            row = max(0, min(self.timeline.num_rows - 1, self.timeline.y_to_row(new_pos.y())))
             y = self.timeline.row_to_y(row)
 
             proposed_pos = QPointF(x, y)

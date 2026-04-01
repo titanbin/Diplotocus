@@ -1,11 +1,35 @@
 from PySide6.QtWidgets import (
-    QGraphicsView, QGraphicsScene, QGraphicsRectItem, QFileDialog
+    QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsSimpleTextItem, QFileDialog
 )
-from PySide6.QtCore import Qt, QRectF, QEvent
+from PySide6.QtCore import Qt, QRectF, QEvent, QTimer
 from PySide6.QtGui import QPen, QBrush, QColor
 from .constants import TOP_MARGIN, BOTTOM_MARGIN, NUM_ROWS, CLIP_WIDTH, LEFT_MARGIN, MIN_TIMELINE_WIDTH, TIMELINE_WIDTH
 from .timeline_controls import TimePin, TimelineResizeHandle
 from .timeline_clip import TimelineClip
+
+class AddTrackButton(QGraphicsRectItem):
+    def __init__(self, timeline):
+        super().__init__(0, 0, 120, 24)
+        self.timeline = timeline
+        self.setPen(QPen(Qt.NoPen))
+        self.setBrush(QBrush(QColor("#3B3B3B")))
+        self.setZValue(50)
+
+        self.label = QGraphicsSimpleTextItem("+", self)
+        self.label.setBrush(QBrush(QColor("#E8E8E8")))
+        self.label.setScale(1.25)
+
+    def mousePressEvent(self, event):
+        self.timeline.add_row()
+        event.accept()
+
+    def hoverEnterEvent(self, event):
+        self.setBrush(QBrush(QColor("#4B4B4B")))
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        self.setBrush(QBrush(QColor("#3B3B3B")))
+        super().hoverLeaveEvent(event)
 
 class TimelineView(QGraphicsView):
     def __init__(self):
@@ -26,7 +50,7 @@ class TimelineView(QGraphicsView):
         self.time_pin = TimePin(0, self)
         self.scene_obj.addItem(self.time_pin)
         self.time_pin.set_frame(0)
-        from PySide6.QtCore import QTimer
+        
         self.play_timer = QTimer(self)
         self.play_timer.setInterval(1000 // (30 * 3))
         self.play_timer.timeout.connect(self.advance_frame)
@@ -38,12 +62,18 @@ class TimelineView(QGraphicsView):
             self.scene_obj.sceneRect(),
             pen=QPen(Qt.NoPen)
         )
+        self.background_rect.setZValue(-30)
         self.resize_handle = TimelineResizeHandle(self)
         self.scene_obj.addItem(self.resize_handle)
         self.update_resize_handle()
 
         self.row_lines = []
         self.draw_row_lines()
+
+        self.add_track_button = AddTrackButton(self)
+        self.add_track_button.setAcceptHoverEvents(True)
+        self.scene_obj.addItem(self.add_track_button)
+        self.update_add_track_button()
 
         self.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.setResizeAnchor(QGraphicsView.NoAnchor)
@@ -57,6 +87,51 @@ class TimelineView(QGraphicsView):
         rect = self.background_rect.rect()
         self.resize_handle.setX(rect.right() + self.resize_handle.margin)
         self.resize_handle.setY(0)
+
+    def update_add_track_button(self):
+        x = 0
+        y = self.row_to_y(self.num_rows) + 2
+        self.add_track_button.setRect(0, 0, self.timeline_width, self.add_track_button.rect().height())
+        self.add_track_button.setPos(x, y)
+
+        label_rect = self.add_track_button.label.boundingRect()
+        btn_rect = self.add_track_button.rect()
+        self.add_track_button.label.setPos(
+            (btn_rect.width() - label_rect.width()) / 2,
+            (btn_rect.height() - label_rect.height()) / 2 - 1
+        )
+
+    def update_timeline_layout(self):
+        self.timeline_height = self.get_timeline_height()
+        self.row_height = min(self.timeline_height / self.num_rows, 80)
+        self.scene_obj.setSceneRect(0, 0, self.timeline_width + 50, self.timeline_height + self.top_margin)
+        self.background_rect.setRect(self.scene_obj.sceneRect())
+        self.update_resize_handle()
+        self.draw_row_lines()
+        self.update_add_track_button()
+
+        self.time_pin.timeline_height = self.timeline_height
+        self.time_pin.setLine(0, 0, 0, self.timeline_height)
+
+        for item in self.scene_obj.items():
+            if isinstance(item, TimelineClip):
+                row = max(0, min(self.num_rows - 1, self.y_to_row(item.pos().y())))
+                item.setRect(0, 0, item.rect().width(), self.row_height)
+                item.setPos(item.pos().x(), self.row_to_y(row))
+
+    def add_row(self):
+        self.num_rows += 1
+        self.update_timeline_layout()
+
+    def find_available_row(self, x, width):
+        row = 0
+        while True:
+            if row >= self.num_rows:
+                self.add_row()
+            rect = QRectF(x, self.row_to_y(row), width, self.row_height)
+            if not self.check_overlap(None, rect):
+                return row
+            row += 1
 
     def is_frame_rendered(self, frame: int) -> bool:
         return frame in self.rendered_frames
@@ -127,41 +202,17 @@ class TimelineView(QGraphicsView):
 
     def set_timeline_width(self, width):
         self.timeline_width = width
-        self.timeline_height = self.get_timeline_height()
-        self.scene_obj.setSceneRect(0, 0, width + 50, self.timeline_height + self.top_margin)
-        self.background_rect.setRect(self.scene_obj.sceneRect())
-        self.update_resize_handle()
-        self.draw_row_lines()
-
-        for item in self.scene_obj.items():
-            if isinstance(item, TimelineClip):
-                row = self.y_to_row(item.pos().y())
-                item.setRect(0, 0, item.rect().width(), self.row_height)
-                item.setPos(item.pos().x(), self.row_to_y(row))
+        self.update_timeline_layout()
         self.time_pin.timeline_width = width
 
     def resizeEvent(self, event):
-        self.timeline_height = self.get_timeline_height()
         self.resize_handle.setRect(
             self.resize_handle.rect().x(),
             (self.timeline_height + self.top_margin - self.resize_handle.height) / 2,
             self.resize_handle.rect().width(),
             self.resize_handle.height
         )
-
-        self.row_height = min(self.timeline_height / self.num_rows, 80)
-        self.scene_obj.setSceneRect(0, 0, self.timeline_width, self.timeline_height + self.top_margin)
-        self.background_rect.setRect(self.scene_obj.sceneRect())
-        self.draw_row_lines()
-
-        self.time_pin.timeline_height = self.timeline_height
-        self.time_pin.setLine(0, 0, 0, self.timeline_height)
-
-        for item in self.scene_obj.items():
-            if isinstance(item, TimelineClip):
-                row = self.y_to_row(item.pos().y())
-                item.setRect(0, 0, item.rect().width(), self.row_height)
-                item.setPos(item.pos().x(), self.row_to_y(row))
+        self.update_timeline_layout()
         super().resizeEvent(event)
 
     def compute_rightmost_clip(self):
@@ -172,23 +223,29 @@ class TimelineView(QGraphicsView):
                     self.rightmost_clip = clip.pos().x() + clip.rect().width()
 
     def draw_row_lines(self):
-        if len(self.row_lines) == 0:
-            self.create_row_lines()
-        else:
-            for i, rect in enumerate(self.row_lines):
-                y1 = self.top_margin + i * self.row_height
-                y2 = self.top_margin + (i + 1) * self.row_height
-                rect.setPos(rect.x(), y1)
-                rect.setRect(0, 0, self.timeline_width, y2 - y1)
+        if len(self.row_lines) < self.num_rows:
+            self.create_row_lines(start=len(self.row_lines))
 
-    def create_row_lines(self):
-        for i in range(self.num_rows):
+        for i, rect in enumerate(self.row_lines):
+            if i >= self.num_rows:
+                rect.setVisible(False)
+                continue
+            rect.setVisible(True)
+            y1 = self.top_margin + i * self.row_height
+            y2 = self.top_margin + (i + 1) * self.row_height
+            rect.setPos(0, y1)
+            rect.setRect(0, 0, self.timeline_width, y2 - y1)
+
+    def create_row_lines(self, start=0):
+        for i in range(start, self.num_rows):
             y1 = self.top_margin + i * self.row_height
             y2 = self.top_margin + (i + 1) * self.row_height
             rect = self.scene_obj.addRect(
-                0, y1, self.timeline_width, y2,
+                0, y1, self.timeline_width, y2 - y1,
+                pen=QPen(QColor("#1F1F1F")),
                 brush=QBrush(QColor("#2B2B2B"))
             )
+            rect.setZValue(-20)
             self.row_lines.append(rect)
 
     def advance_frame(self):
@@ -307,9 +364,12 @@ class TimelineView(QGraphicsView):
 
     def dropEvent(self, event):
         scene_pos = self.mapToScene(event.position().toPoint())
-        row = max(0, min(self.num_rows - 1, int((scene_pos.y() - self.top_margin) / self.row_height)))
         x = max(LEFT_MARGIN, min(scene_pos.x() - CLIP_WIDTH / 2, self.timeline_width))
         clip_name = event.mimeData().text()
+
+        row = max(0, min(self.num_rows - 1, int((scene_pos.y() - self.top_margin) / self.row_height)))
+        if row >= self.num_rows:
+            row = self.find_available_row(x, CLIP_WIDTH)
 
         clip = TimelineClip(self, x, row, clip_name)
         rect = QRectF(
@@ -317,6 +377,10 @@ class TimelineView(QGraphicsView):
             clip.rect().width(), clip.rect().height()
         )
         if not self.check_overlap(clip, rect):
+            self.scene_obj.addItem(clip)
+        else:
+            row = self.find_available_row(x, clip.rect().width())
+            clip.setPos(x, self.row_to_y(row))
             self.scene_obj.addItem(clip)
         event.acceptProposedAction()
 

@@ -45,8 +45,8 @@ class MainWindow(QWidget):
 
         self.list_widget = PaletteList()
         self.list_widget.setSpacing(1.5)
-        from PySide6.QtWidgets import QListWidget as QListWidgetBase
-        self.list_widget.setSelectionMode(QListWidgetBase.NoSelection)
+        
+        self.list_widget.setSelectionMode(QListWidget.NoSelection)
         self.list_widget.setStyleSheet("""
             QListWidget::item {
                 height: 32px;
@@ -66,7 +66,7 @@ class MainWindow(QWidget):
         bottom_layout.setSpacing(0)
 
         timeline_margin = QWidget()
-        from PySide6.QtWidgets import QSizePolicy
+        
         timeline_margin.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         timeline_margin.setStyleSheet("background: #171717;")
         bottom_layout.addWidget(timeline_margin)
