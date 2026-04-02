@@ -68,6 +68,15 @@
           </div>
         </div>
       </section>
+
+      <aside class="palette">
+        <div class="palette-item" draggable="true" data-type="Axis_zoom">Axis zoom</div>
+        <div class="palette-item" draggable="true" data-type="Axis_limits">Axis limits</div>
+        <div class="palette-item" draggable="true" data-type="Axis_move">Axis move</div>
+        <div class="palette-item" draggable="true" data-type="Axis_alpha">Axis alpha</div>
+        <div class="palette-item" draggable="true" data-type="Fig_width_ratio">Figure width ratio</div>
+        <div class="palette-item" draggable="true" data-type="Fig_height_ratio">Figure height ratio</div>
+    </aside>
     </section>
   </main>
 
@@ -75,11 +84,11 @@
     <div class="dialog">
       <h3>Clip Properties</h3>
       <div class="dialog-grid">
-        <label>Delay <input id="dlgDelay" type="number" step="1" /></label>
-        <label>Duration <input id="dlgDuration" type="number" step="1" min="1" /></label>
-        <label>Easing <select id="dlgEasing"></select></label>
-        <label>Object <select id="dlgObject"></select></label>
-        <label>Persistent <input id="dlgPersistent" type="checkbox" /></label>
+        <label id="dlgPersistentWrap">Persistent <input id="dlgPersistent" type="checkbox" /></label>
+        <label id="dlgEasingWrap">Easing <select id="dlgEasing"></select></label>
+        <label id="dlgDelayWrap">Delay <input id="dlgDelay" type="number" step="1" /></label>
+        <label id="dlgDurationWrap">Duration <input id="dlgDuration" type="number" step="1" min="1" /></label>
+        <label id="dlgObjectWrap">Object <select id="dlgObject"></select></label>
         <label id="dlgStartXWrap" class="prop-field">Start X <input id="dlgStartX" type="number" step="any" /></label>
         <label id="dlgStartYWrap" class="prop-field">Start Y <input id="dlgStartY" type="number" step="any" /></label>
         <label id="dlgEndXWrap" class="prop-field">End X <input id="dlgEndX" type="number" step="any" /></label>
@@ -89,6 +98,13 @@
         <label id="dlgTweenPropsWrap" class="prop-field">Property names <input id="dlgTweenProps" type="text" /></label>
         <label id="dlgTweenStartsWrap" class="prop-field">Start values <input id="dlgTweenStarts" type="text" /></label>
         <label id="dlgTweenEndsWrap" class="prop-field">End values <input id="dlgTweenEnds" type="text" /></label>
+        <label id="dlgZoomWrap" class="prop-field">Zoom <input id="dlgZoom" type="number" step="any" /></label>
+        <label id="dlgXlimLeftWrap" class="prop-field">X limit left <input id="dlgXlimLeft" type="number" step="any" /></label>
+        <label id="dlgXlimRightWrap" class="prop-field">X limit right <input id="dlgXlimRight" type="number" step="any" /></label>
+        <label id="dlgYlimBottomWrap" class="prop-field">Y limit bottom <input id="dlgYlimBottom" type="number" step="any" /></label>
+        <label id="dlgYlimTopWrap" class="prop-field">Y limit top <input id="dlgYlimTop" type="number" step="any" /></label>
+        <label id="dlgRatioStartWrap" class="prop-field">Start ratios <input id="dlgRatioStart" type="text" /></label>
+        <label id="dlgRatioEndWrap" class="prop-field">End ratios <input id="dlgRatioEnd" type="text" /></label>
       </div>
       <div class="dialog-actions">
         <button id="dlgCancel">Cancel</button>

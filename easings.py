@@ -7,6 +7,9 @@ import sys, inspect
 #TODO: change plot of easings.ipynb like this : https://api.flutter.dev/flutter/animation/Curves/easeInBack-constant.html
 
 class Easing:
+    def __init__(self, func=None):
+        self.func = func if func is not None else (lambda x: x)
+    
     def ease(self,x):
         return self.func(x)
     

@@ -264,10 +264,10 @@ class Animation:
                 ends[i] = list(mpl.colors.to_rgba_array(ends[i])[0])
         return properties,starts,ends
 
-    def tween(self,property,start,end,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def tween(self,property,start,end,duration,delay=0,easing=None,persistent=True):
         return self.tweens([property],[start],[end],duration,delay,easing,persistent=persistent)
     
-    def tweens(self,properties,starts,ends,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def tweens(self,properties,starts,ends,duration,delay=0,easing=None,persistent=True):
         starts = [np.ravel(start) for start in starts]
         ends = [np.ravel(end) for end in ends]
         properties = self.get_main_alias(properties)
@@ -305,13 +305,13 @@ class Animation:
             kwargs[anim['property']] = current
         return kwargs
 
-    def show(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def show(self,duration,delay=0,easing=None,persistent=True):
         return self.tween('alpha',start=0,end=1,duration=duration,delay=delay,easing=easing,persistent=persistent)
 
-    def hide(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def hide(self,duration,delay=0,easing=None,persistent=True):
         return self.tween('alpha',start=1,end=0,duration=duration,delay=delay,easing=easing,persistent=persistent)
     
-    def draw(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def draw(self,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'draw',
             'duration':duration,
@@ -322,7 +322,7 @@ class Animation:
         self.compute_timings()
         return self
     
-    def erase(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def erase(self,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'erase',
             'duration':duration,
@@ -333,7 +333,7 @@ class Animation:
         self.compute_timings()
         return self
     
-    def grow(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def grow(self,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'grow',
             'duration':duration,
@@ -343,7 +343,7 @@ class Animation:
         })
         return self
     
-    def shrink(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def shrink(self,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'shrink',
             'duration':duration,
@@ -354,7 +354,7 @@ class Animation:
         self.compute_timings()
         return self
     
-    def scale(self,scale_start,scale_end,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def scale(self,scale_start,scale_end,duration,delay=0,easing=None,persistent=True):
         if isinstance(scale_start,(list,tuple,np.ndarray)):
             scalex_start,scaley_start = scale_start
         else:
@@ -404,7 +404,7 @@ class Animation:
             else:
                 o.set_transform(self.T + self.axis.transData)
 
-    def rotate(self,angle_start,angle_end,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def rotate(self,angle_start,angle_end,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'rotate',
             'duration':duration,
@@ -444,7 +444,7 @@ class Animation:
             else:
                 o.set_transform(self.T + self.axis.transData)
     
-    def translate(self,start_pos,end_pos,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def translate(self,start_pos,end_pos,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'translate',
             'duration':duration,
@@ -469,7 +469,7 @@ class Animation:
             else:
                 o.set_transform(self.T + self.axis.transData)
 
-    def update(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def update(self,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'update',
             'duration':duration,
@@ -480,7 +480,7 @@ class Animation:
         self.compute_timings()
         return self
     
-    def deupdate(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def deupdate(self,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'deupdate',
             'duration':duration,
@@ -491,7 +491,7 @@ class Animation:
         self.compute_timings()
         return self
     
-    def morph(self,new_x,new_y,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def morph(self,new_x,new_y,duration,delay=0,easing=None,persistent=True):
         # TODO : if new_x/new_y not the same size, resample them to match
         if isinstance(new_x,numbers.Number):
             new_x = [new_x]
@@ -509,7 +509,7 @@ class Animation:
         self.compute_timings()
         return self
     
-    def demorph(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def demorph(self,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'demorph',
             'duration':duration,
@@ -519,7 +519,7 @@ class Animation:
         })
         return self
     
-    def sequence(self,duration,delay=0,easing=easings.easeLinear(),persistent=True):
+    def sequence(self,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'sequence',
             'duration':duration,
@@ -531,6 +531,13 @@ class Animation:
         return self
 
     def clean(self,x,clear_anims=True):
+        for anim in self.anims:
+            if anim['easing'] is None:
+                if self.easing is not None:
+                    anim['easing'] = self.easing
+                else:
+                    anim['easing'] = self.seq.easing
+
         for anim in self.anims:
             t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
             if t != 1:

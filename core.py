@@ -168,14 +168,7 @@ class Sequence:
         
         x_max = 0
         for animation in animations:
-            if animation.axis is None:
-                animation.set_axis(self.main_axis)
             animation.initialize(self)
-            if animation.easing == None:
-                if easing is None:
-                    animation.easing = self.easing
-                else:
-                    animation.easing = easing
 
             if animation.x_max > x_max:
                 x_max = animation.x_max
@@ -262,5 +255,3 @@ class Sequence:
 #have to, as initialisation, replace the specific axis with the new one (save old axis in Sequence, find index of specific axis in old axes, get new axis using index)
 #TODO : update all functions past plot so that function() takes x not t, and loop over all anims and compute each t
 #depending on the anim xmin and xmax (delay and duration).
-#TODO : add rows and when resizing timeline height, fix jumps between rows
-#TODO : Web-based GUI instead

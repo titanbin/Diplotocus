@@ -1,1 +1,6 @@
 __pycache__/
+*.mov
+GUI_web/.DS_Store
+.DS_Store
+diplotocus-docs/.DS_Store
+diplotocus-docs/Unnamed/

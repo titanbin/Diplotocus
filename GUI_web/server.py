@@ -1,18 +1,19 @@
-import json
-import sys
-import threading
-import webbrowser
-import re
-import ast
-import mimetypes
-import shutil
-import tempfile
-import uuid
+import json,sys,threading,webbrowser,re,ast,mimetypes,shutil,tempfile,uuid
+import numpy as np
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 import diplotocus.easings as easings
+import diplotocus.animations as animations
 
+SPECIAL_CLIP_TYPES = {
+    "axis_zoom",
+    "axis_limits",
+    "axis_move",
+    "axis_alpha",
+    "fig_width_ratio",
+    "fig_height_ratio",
+}
 
 def _safe_int(value, default=0):
     try:
@@ -20,10 +21,17 @@ def _safe_int(value, default=0):
     except Exception:
         return default
 
+def _safe_float(value, default=0.0):
+    try:
+        return float(value)
+    except Exception:
+        return float(default)
 
 def _safe_name(name):
-    return str(name).strip().lower()
-
+    text = str(name).strip().lower()
+    text = re.sub(r"\s+", "_", text)
+    text = re.sub(r"[^a-z0-9_]+", "", text)
+    return text
 
 class GUI:
     """Serve the web GUI locally.
@@ -60,7 +68,9 @@ class GUI:
         self._anim_to_clip_id = {}
         self._clip_id_to_anim = {}
         self._clip_id_to_owner = {}
+        self._clip_id_to_type = {}
         self._clip_rows = {}
+        self._detached_clip_ids = set()
         self._clip_seed = 0
         self._render_revision = 0
         self._timeline_width_override = None
@@ -78,7 +88,89 @@ class GUI:
         return bool(getattr(sys, "ps1", False) or sys.flags.interactive)
 
     def _all_objects(self):
-        return [el["object"] for el in self.plot_objects if isinstance(el, dict) and "object" in el]
+        objects = []
+        for el in self.plot_objects:
+            if not isinstance(el, dict):
+                continue
+            obj = el.get("object")
+            if obj is None:
+                continue
+            objects.append(obj)
+        return objects
+
+    def _display_clip_type(self, type_key):
+        return str(type_key or "clip").capitalize()
+
+    def _clip_type_for_clip(self, clip_id, anim):
+        mapped_type = self._clip_id_to_type.get(clip_id)
+        if mapped_type:
+            return mapped_type
+
+        owner_index = self._find_clip_owner_index(clip_id)
+        if owner_index is not None and 0 <= owner_index < len(self.plot_objects):
+            entry = self.plot_objects[owner_index]
+            if isinstance(entry, dict):
+                owner_obj = entry.get("object")
+                owner_type = _safe_name(owner_obj.__class__.__name__) if owner_obj is not None else ""
+                if owner_type in SPECIAL_CLIP_TYPES:
+                    return owner_type
+
+        return _safe_name(anim.get("name", "")) or "clip"
+
+    def _is_selectable_plot_entry(self, entry):
+        return isinstance(entry, dict) and entry.get("object") is not None and not bool(entry.get("_gui_special", False))
+
+    def _first_selectable_plot_object(self):
+        for index, entry in enumerate(self.plot_objects):
+            if self._is_selectable_plot_entry(entry):
+                return index, entry.get("object")
+        return None, None
+
+    def _default_axis_for_special(self, source_object):
+        source_axis = getattr(source_object, "axis", None)
+        if source_axis is not None:
+            return source_axis
+        if self.seq is not None and hasattr(self.seq, "main_axis"):
+            return self.seq.main_axis
+        return None
+
+    def _default_ratio_length(self, axis, use_width):
+        if axis is None:
+            return 2
+        try:
+            grid = axis.get_gridspec()
+            if use_width:
+                return max(1, int(getattr(grid, "ncols", 2)))
+            return max(1, int(getattr(grid, "nrows", 2)))
+        except Exception:
+            return 2
+
+    def _build_special_animation(self, clip_type, duration, delay, easing, axis):
+        if clip_type == "axis_zoom":
+            return animations.axis_zoom(zoom=1.0, duration=duration, delay=delay, easing=easing, axis=axis)
+
+        if clip_type == "axis_limits":
+            xlim = axis.get_xlim() if axis is not None else (0.0, 1.0)
+            ylim = axis.get_ylim() if axis is not None else (0.0, 1.0)
+            return animations.axis_limits(duration=duration, xlim=xlim, ylim=ylim, delay=delay, easing=easing, axis=axis)
+
+        if clip_type == "axis_move":
+            return animations.axis_move(end_pos=(0.0, 0.0), duration=duration, start_pos=None, delay=delay, easing=easing, axis=axis)
+
+        if clip_type == "axis_alpha":
+            return animations.axis_alpha(start_alpha=0.0, end_alpha=1.0, duration=duration, delay=delay, easing=easing, axis=axis)
+
+        if clip_type == "fig_width_ratio":
+            ncols = self._default_ratio_length(axis, use_width=True)
+            ratios = tuple([1.0] * ncols)
+            return animations.fig_width_ratio(start_widths=ratios, end_widths=ratios, duration=duration, delay=delay, easing=easing, axis=axis)
+
+        if clip_type == "fig_height_ratio":
+            nrows = self._default_ratio_length(axis, use_width=False)
+            ratios = tuple([1.0] * nrows)
+            return animations.fig_height_ratio(start_heights=ratios, end_heights=ratios, duration=duration, delay=delay, easing=easing, axis=axis)
+
+        raise ValueError(f"Unsupported special clip type: {clip_type}")
 
     def _next_clip_id(self):
         self._clip_seed += 1
@@ -92,8 +184,8 @@ class GUI:
             self._clip_id_to_anim[clip_id] = anim
         return self._anim_to_clip_id[key]
 
-    def _type_from_anim(self, anim):
-        return str(anim.get("name", "")).capitalize() or "Clip"
+    def _type_from_anim(self, clip_id, anim):
+        return self._display_clip_type(self._clip_type_for_clip(clip_id, anim))
 
     def _max_frame(self):
         max_frame = self._rightmost_clip()
@@ -112,21 +204,24 @@ class GUI:
 
     def _serialize_clips(self):
         clips = []
-        for owner_index, entry in enumerate(self.plot_objects):
-            if not isinstance(entry, dict) or "object" not in entry:
+        for clip_id, anim in self._clip_id_to_anim.items():
+            clip = {
+                "id": clip_id,
+                "type": self._type_from_anim(clip_id, anim),
+                "x": _safe_int(anim.get("delay", 0)),
+                "width": max(1, _safe_int(anim.get("duration", 1))),
+                "row": self._clip_rows.get(clip_id, 0),
+            }
+            clips.append(clip)
+
+            if clip_id in self._detached_clip_ids:
+                self._clip_id_to_owner[clip_id] = None
                 continue
-            obj = entry["object"]
-            for anim in getattr(obj, "anims", []):
-                clip_id = self._clip_id_for_anim(anim)
-                self._clip_id_to_owner[clip_id] = owner_index
-                clip = {
-                    "id": clip_id,
-                    "type": self._type_from_anim(anim),
-                    "x": _safe_int(anim.get("delay", 0)),
-                    "width": max(1, _safe_int(anim.get("duration", 1))),
-                    "row": self._clip_rows.get(clip_id, 0),
-                }
-                clips.append(clip)
+
+            if clip_id not in self._clip_id_to_owner:
+                owner_index = self._find_clip_owner_index(clip_id)
+                if owner_index is not None:
+                    self._clip_id_to_owner[clip_id] = owner_index
 
         # Keep rows compact and avoid accidental overlaps by greedy reassignment
         # only when row has not been explicitly set yet.
@@ -223,15 +318,31 @@ class GUI:
         self._render_revision += 1
 
     def _create_clip(self, clip_type, x, width, row):
-        objs = self._all_objects()
-        if len(objs) == 0:
+        obj_index, target = self._first_selectable_plot_object()
+        if target is None:
             raise RuntimeError("No plot objects available. Pass plot_objects to GUI_web.GUI(...).")
 
-        obj_index = 0
-        target = objs[obj_index]
         name = _safe_name(clip_type)
         duration = max(1, _safe_int(width, 120))
         delay = max(0, _safe_int(x, 0))
+
+        if name in SPECIAL_CLIP_TYPES:
+            easing = easings.easeLinear()
+            axis = self._default_axis_for_special(target)
+            special_object = self._build_special_animation(name, duration, delay, easing, axis)
+            self.plot_objects.append({
+                "name": str(clip_type),
+                "object": special_object,
+                "_gui_special": True,
+            })
+
+            anim = special_object.anims[0]
+            clip_id = self._clip_id_for_anim(anim)
+            self._clip_id_to_owner[clip_id] = len(self.plot_objects) - 1
+            self._clip_id_to_type[clip_id] = name
+            self._clip_rows[clip_id] = max(0, _safe_int(row, 0))
+            self._invalidate_render_cache(from_frame=delay)
+            return clip_id
 
         before = len(target.anims)
         if name == "translate":
@@ -265,6 +376,7 @@ class GUI:
         anim = target.anims[-1]
         clip_id = self._clip_id_for_anim(anim)
         self._clip_id_to_owner[clip_id] = obj_index
+        self._clip_id_to_type[clip_id] = name
         self._clip_rows[clip_id] = max(0, _safe_int(row, 0))
         self._invalidate_render_cache(from_frame=delay)
         return clip_id
@@ -289,6 +401,25 @@ class GUI:
                     names.append(name)
         return sorted(set(names))
 
+    def _find_clip_owner_index(self, clip_id):
+        owner_index = self._clip_id_to_owner.get(clip_id)
+        if owner_index is not None and 0 <= owner_index < len(self.plot_objects):
+            return owner_index
+
+        anim = self._clip_id_to_anim.get(clip_id)
+        if anim is None:
+            return None
+
+        for index, entry in enumerate(self.plot_objects):
+            if not isinstance(entry, dict):
+                continue
+            owner_obj = entry.get("object")
+            if owner_obj is None:
+                continue
+            if anim in getattr(owner_obj, "anims", []):
+                return index
+        return None
+
     def _clip_properties(self, clip_id):
         anim = self._clip_id_to_anim.get(clip_id)
         if anim is None:
@@ -298,7 +429,7 @@ class GUI:
         easing_name = easing_obj.__class__.__name__ if easing_obj is not None else "easeLinear"
         props = {
             "id": clip_id,
-            "type": self._type_from_anim(anim),
+            "type": self._type_from_anim(clip_id, anim),
             "delay": _safe_int(anim.get("delay", 0)),
             "duration": max(1, _safe_int(anim.get("duration", 1))),
             "persistent": bool(anim.get("persistent", True)),
@@ -306,26 +437,29 @@ class GUI:
             "availableEasings": self._available_easings(),
         }
 
-        clip_type = _safe_name(anim.get("name", ""))
+        clip_type = self._clip_type_for_clip(clip_id, anim)
         object_options = [{"id": 0, "name": "None"}]
         for i, obj in enumerate(self.plot_objects):
-            if not isinstance(obj, dict) or "name" not in obj or "object" not in obj:
+            if not self._is_selectable_plot_entry(obj):
                 continue
             if clip_type == "morph" and not ("new_x" in obj and "new_y" in obj):
                 continue
             object_options.append({"id": i + 1, "name": obj["name"]})
 
-        owner_index = self._clip_id_to_owner.get(clip_id)
-        if owner_index is None:
+        if clip_type in SPECIAL_CLIP_TYPES:
             current_object_id = 0
+        elif clip_id in self._clip_id_to_owner:
+            owner_index = self._clip_id_to_owner.get(clip_id)
+            current_object_id = 0 if owner_index is None else owner_index + 1
         else:
-            current_object_id = owner_index + 1
+            owner_index = self._find_clip_owner_index(clip_id)
+            current_object_id = 0 if owner_index is None else owner_index + 1
 
         props["plotObjectOptions"] = object_options
         props["plotObjectId"] = current_object_id
 
-        name = _safe_name(anim.get("name", ""))
-        if name in {"translate", "scale"}:
+        name = clip_type
+        if name in {"translate", "scale", "axis_move"}:
             start = anim.get("start", (0, 0))
             end = anim.get("end", (1, 1))
             props.update({
@@ -334,10 +468,26 @@ class GUI:
                 "end_x": float(end[0]),
                 "end_y": float(end[1]),
             })
+        elif name == "axis_zoom":
+            props.update({"zoom": float(anim.get("zoom", 1.0))})
+        elif name == "axis_limits":
+            xlim = anim.get("xlim")
+            ylim = anim.get("ylim")
+            props.update({
+                "xlim_left": None if xlim is None else float(xlim[0]),
+                "xlim_right": None if xlim is None else float(xlim[1]),
+                "ylim_bottom": None if ylim is None else float(ylim[0]),
+                "ylim_top": None if ylim is None else float(ylim[1]),
+            })
         elif name == "rotate":
             props.update({
                 "start": float(anim.get("start", 0)),
                 "end": float(anim.get("end", 360)),
+            })
+        elif name == "axis_alpha":
+            props.update({
+                "start": float(anim.get("start", 1.0)),
+                "end": float(anim.get("end", 1.0)),
             })
         elif name == "tween":
             props.update({
@@ -345,6 +495,13 @@ class GUI:
                 "tween_starts": str([anim.get("start", 1)]),
                 "tween_ends": str([anim.get("end", 1)]),
             })
+        elif name in {"fig_width_ratio", "fig_height_ratio"}:
+            props.update({
+                "ratio_start": str(list(np.ravel(anim.get("start", [1.0])))),
+                "ratio_end": str(list(np.ravel(anim.get("end", [1.0])))),
+            })
+
+        props["typeKey"] = clip_type
 
         return props
 
@@ -368,31 +525,39 @@ class GUI:
         if anim is None:
             raise KeyError(f"Unknown clip id: {clip_id}")
 
-        old_owner_index = self._clip_id_to_owner.get(clip_id)
-        new_object_id = _safe_int(payload.get("plotObjectId", old_owner_index + 1 if old_owner_index is not None else 0), 0)
-        new_owner_index = new_object_id - 1
+        clip_type = self._clip_type_for_clip(clip_id, anim)
 
-        if new_object_id == 0:
-            # Keep current assignment in the web prototype to avoid orphan animations.
-            new_owner_index = old_owner_index
+        if clip_type not in SPECIAL_CLIP_TYPES:
+            old_owner_index = self._find_clip_owner_index(clip_id)
+            new_object_id = _safe_int(payload.get("plotObjectId", old_owner_index + 1 if old_owner_index is not None else 0), 0)
+            if new_object_id == 0:
+                if old_owner_index is not None and 0 <= old_owner_index < len(self.plot_objects):
+                    old_owner_entry = self.plot_objects[old_owner_index]
+                    old_owner_obj = old_owner_entry.get("object") if isinstance(old_owner_entry, dict) else None
+                    if old_owner_obj is not None and anim in old_owner_obj.anims:
+                        old_owner_obj.anims.remove(anim)
+                self._detached_clip_ids.add(clip_id)
+                self._clip_id_to_owner[clip_id] = None
+            else:
+                new_owner_index = new_object_id - 1
+                if not (0 <= new_owner_index < len(self.plot_objects)):
+                    raise ValueError("Invalid plot object selection.")
 
-        # Reassign animation ownership in a Qt-like way.
-        if old_owner_index is not None and 0 <= old_owner_index < len(self.plot_objects):
-            old_owner_obj = self.plot_objects[old_owner_index].get("object") if isinstance(self.plot_objects[old_owner_index], dict) else None
-            if old_owner_obj is not None and anim in old_owner_obj.anims and old_owner_index != new_owner_index:
-                old_owner_obj.anims.remove(anim)
+                if old_owner_index is not None and old_owner_index != new_owner_index:
+                    old_owner_entry = self.plot_objects[old_owner_index]
+                    old_owner_obj = old_owner_entry.get("object") if isinstance(old_owner_entry, dict) else None
+                    if old_owner_obj is not None and anim in old_owner_obj.anims:
+                        old_owner_obj.anims.remove(anim)
 
-        if new_owner_index is None or not (0 <= new_owner_index < len(self.plot_objects)):
-            raise ValueError("Invalid plot object selection.")
+                new_owner_entry = self.plot_objects[new_owner_index]
+                if not isinstance(new_owner_entry, dict) or "object" not in new_owner_entry:
+                    raise ValueError("Invalid plot object selection.")
 
-        new_owner_entry = self.plot_objects[new_owner_index]
-        if not isinstance(new_owner_entry, dict) or "object" not in new_owner_entry:
-            raise ValueError("Invalid plot object selection.")
-
-        new_owner_obj = new_owner_entry["object"]
-        if anim not in new_owner_obj.anims:
-            new_owner_obj.anims.append(anim)
-        self._clip_id_to_owner[clip_id] = new_owner_index
+                new_owner_obj = new_owner_entry["object"]
+                if anim not in new_owner_obj.anims:
+                    new_owner_obj.anims.append(anim)
+                self._detached_clip_ids.discard(clip_id)
+                self._clip_id_to_owner[clip_id] = new_owner_index
 
         old_delay = _safe_int(anim.get("delay", 0))
 
@@ -404,17 +569,53 @@ class GUI:
         if easing_name and hasattr(easings, easing_name):
             anim["easing"] = getattr(easings, easing_name)()
 
-        name = _safe_name(anim.get("name", ""))
-        if name in {"translate", "scale"}:
+        name = clip_type
+        if name in {"translate", "scale", "axis_move"}:
             start_x = float(payload.get("start_x", anim.get("start", (0, 0))[0]))
             start_y = float(payload.get("start_y", anim.get("start", (0, 0))[1]))
             end_x = float(payload.get("end_x", anim.get("end", (1, 1))[0]))
             end_y = float(payload.get("end_y", anim.get("end", (1, 1))[1]))
             anim["start"] = (start_x, start_y)
             anim["end"] = (end_x, end_y)
+        elif name == "axis_zoom":
+            anim["zoom"] = _safe_float(payload.get("zoom", anim.get("zoom", 1.0)), 1.0)
+        elif name == "axis_limits":
+            current_xlim = anim.get("xlim")
+            current_ylim = anim.get("ylim")
+            anim["xlim"] = (
+                _safe_float(payload.get("xlim_left", current_xlim[0] if current_xlim is not None else 0.0), 0.0),
+                _safe_float(payload.get("xlim_right", current_xlim[1] if current_xlim is not None else 1.0), 1.0),
+            )
+            anim["ylim"] = (
+                _safe_float(payload.get("ylim_bottom", current_ylim[0] if current_ylim is not None else 0.0), 0.0),
+                _safe_float(payload.get("ylim_top", current_ylim[1] if current_ylim is not None else 1.0), 1.0),
+            )
         elif name == "rotate":
             anim["start"] = float(payload.get("start", anim.get("start", 0)))
             anim["end"] = float(payload.get("end", anim.get("end", 360)))
+        elif name == "axis_alpha":
+            anim["start"] = _safe_float(payload.get("start", anim.get("start", 1.0)), 1.0)
+            anim["end"] = _safe_float(payload.get("end", anim.get("end", 1.0)), 1.0)
+        elif name in {"fig_width_ratio", "fig_height_ratio"}:
+            starts = self._parse_list_like(payload.get("ratio_start"), list(np.ravel(anim.get("start", [1.0]))))
+            ends = self._parse_list_like(payload.get("ratio_end"), list(np.ravel(anim.get("end", [1.0]))))
+            if len(starts) == 0:
+                starts = [1.0]
+            if len(ends) == 0:
+                ends = [1.0]
+            n = min(len(starts), len(ends))
+            if n == 0:
+                n = 1
+                starts = [1.0]
+                ends = [1.0]
+            starts = np.ravel(starts[:n]).astype(float)
+            ends = np.ravel(ends[:n]).astype(float)
+            start_sum = np.sum(starts)
+            end_sum = np.sum(ends)
+            starts = starts / start_sum if start_sum != 0 else np.ones_like(starts) / len(starts)
+            ends = ends / end_sum if end_sum != 0 else np.ones_like(ends) / len(ends)
+            anim["start"] = starts
+            anim["end"] = ends
         elif name == "tween":
             owner_index = self._clip_id_to_owner.get(clip_id)
             owner_obj = None
@@ -476,7 +677,7 @@ class GUI:
                 delay = _safe_int(anim.get("delay", 0), 0)
                 invalidate_from = delay if invalidate_from is None else min(invalidate_from, delay)
 
-            owner_index = self._clip_id_to_owner.get(clip_id)
+            owner_index = self._find_clip_owner_index(clip_id)
             if owner_index is not None and 0 <= owner_index < len(self.plot_objects):
                 owner_entry = self.plot_objects[owner_index]
                 owner_obj = owner_entry.get("object") if isinstance(owner_entry, dict) else None
@@ -491,6 +692,13 @@ class GUI:
             self._clip_rows.pop(clip_id, None)
             self._clip_id_to_anim.pop(clip_id, None)
             self._clip_id_to_owner.pop(clip_id, None)
+            self._clip_id_to_type.pop(clip_id, None)
+            self._detached_clip_ids.discard(clip_id)
+
+            if owner_index is not None and 0 <= owner_index < len(self.plot_objects):
+                owner_entry = self.plot_objects[owner_index]
+                if isinstance(owner_entry, dict) and owner_entry.get("_gui_special", False):
+                    owner_entry["object"] = None
 
         for clip_id in list(self._clip_rows.keys()):
             if self._clip_rows[clip_id] > target_row:
@@ -518,7 +726,7 @@ class GUI:
             delay = _safe_int(anim.get("delay", 0), 0)
             invalidate_from = delay if invalidate_from is None else min(invalidate_from, delay)
 
-            owner_index = self._clip_id_to_owner.get(clip_id)
+            owner_index = self._find_clip_owner_index(clip_id)
             if owner_index is not None and 0 <= owner_index < len(self.plot_objects):
                 owner_entry = self.plot_objects[owner_index]
                 owner_obj = owner_entry.get("object") if isinstance(owner_entry, dict) else None
@@ -532,6 +740,13 @@ class GUI:
             self._clip_rows.pop(clip_id, None)
             self._clip_id_to_anim.pop(clip_id, None)
             self._clip_id_to_owner.pop(clip_id, None)
+            self._clip_id_to_type.pop(clip_id, None)
+            self._detached_clip_ids.discard(clip_id)
+
+            if owner_index is not None and 0 <= owner_index < len(self.plot_objects):
+                owner_entry = self.plot_objects[owner_index]
+                if isinstance(owner_entry, dict) and owner_entry.get("_gui_special", False):
+                    owner_entry["object"] = None
 
         if not removed_any:
             raise KeyError("No valid clip ids provided.")

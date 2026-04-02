@@ -37,6 +37,77 @@
     statusFadeTimer: null,
   };
 
+  const DIALOG_FIELD_DEFS = {
+    start_x: { wrap: "#dlgStartXWrap", input: "#dlgStartX", defaultValue: "", read: () => Number($("#dlgStartX").val() || 0) },
+    start_y: { wrap: "#dlgStartYWrap", input: "#dlgStartY", defaultValue: "", read: () => Number($("#dlgStartY").val() || 0) },
+    end_x: { wrap: "#dlgEndXWrap", input: "#dlgEndX", defaultValue: "", read: () => Number($("#dlgEndX").val() || 0) },
+    end_y: { wrap: "#dlgEndYWrap", input: "#dlgEndY", defaultValue: "", read: () => Number($("#dlgEndY").val() || 0) },
+    start: { wrap: "#dlgStartWrap", input: "#dlgStart", defaultValue: "", read: () => Number($("#dlgStart").val() || 0) },
+    end: { wrap: "#dlgEndWrap", input: "#dlgEnd", defaultValue: "", read: () => Number($("#dlgEnd").val() || 0) },
+    tween_properties: { wrap: "#dlgTweenPropsWrap", input: "#dlgTweenProps", defaultValue: "[]", read: () => $("#dlgTweenProps").val() },
+    tween_starts: { wrap: "#dlgTweenStartsWrap", input: "#dlgTweenStarts", defaultValue: "[]", read: () => $("#dlgTweenStarts").val() },
+    tween_ends: { wrap: "#dlgTweenEndsWrap", input: "#dlgTweenEnds", defaultValue: "[]", read: () => $("#dlgTweenEnds").val() },
+    zoom: { wrap: "#dlgZoomWrap", input: "#dlgZoom", defaultValue: 1, read: () => Number($("#dlgZoom").val() || 1) },
+    xlim_left: { wrap: "#dlgXlimLeftWrap", input: "#dlgXlimLeft", defaultValue: "", read: () => Number($("#dlgXlimLeft").val() || 0) },
+    xlim_right: { wrap: "#dlgXlimRightWrap", input: "#dlgXlimRight", defaultValue: "", read: () => Number($("#dlgXlimRight").val() || 0) },
+    ylim_bottom: { wrap: "#dlgYlimBottomWrap", input: "#dlgYlimBottom", defaultValue: "", read: () => Number($("#dlgYlimBottom").val() || 0) },
+    ylim_top: { wrap: "#dlgYlimTopWrap", input: "#dlgYlimTop", defaultValue: "", read: () => Number($("#dlgYlimTop").val() || 0) },
+    ratio_start: { wrap: "#dlgRatioStartWrap", input: "#dlgRatioStart", defaultValue: "[1, 1]", read: () => $("#dlgRatioStart").val() },
+    ratio_end: { wrap: "#dlgRatioEndWrap", input: "#dlgRatioEnd", defaultValue: "[1, 1]", read: () => $("#dlgRatioEnd").val() },
+  };
+
+  const DIALOG_TYPE_SCHEMAS = {
+    translate: { fields: ["start_x", "start_y", "end_x", "end_y"], showObject: true },
+    scale: { fields: ["start_x", "start_y", "end_x", "end_y"], showObject: true },
+    rotate: { fields: ["start", "end"], showObject: true },
+    tween: { fields: ["tween_properties", "tween_starts", "tween_ends"], showObject: true },
+    draw: { fields: [], showObject: true },
+    morph: { fields: [], showObject: true },
+    axis_zoom: { fields: ["zoom"], showObject: false },
+    axis_limits: { fields: ["xlim_left", "xlim_right", "ylim_bottom", "ylim_top"], showObject: false },
+    axis_move: { fields: ["start_x", "start_y", "end_x", "end_y"], showObject: false },
+    axis_alpha: { fields: ["start", "end"], showObject: false },
+    fig_width_ratio: { fields: ["ratio_start", "ratio_end"], showObject: false },
+    fig_height_ratio: { fields: ["ratio_start", "ratio_end"], showObject: false },
+    default: { fields: [], showObject: true },
+  };
+
+  function normalizeClipTypeKey(rawType, fallbackType) {
+    const text = String(rawType || fallbackType || "").trim().toLowerCase();
+    if (!text) {
+      return "default";
+    }
+    return text;
+  }
+
+  function applyDialogSchema(typeKey) {
+    const schema = DIALOG_TYPE_SCHEMAS[typeKey] || DIALOG_TYPE_SCHEMAS.default;
+    const visible = new Set(schema.fields || []);
+
+    Object.keys(DIALOG_FIELD_DEFS).forEach((fieldKey) => {
+      const def = DIALOG_FIELD_DEFS[fieldKey];
+      $(def.wrap).toggle(visible.has(fieldKey));
+    });
+
+    $("#dlgObjectWrap").toggle(Boolean(schema.showObject));
+  }
+
+  function fillDialogFields(properties) {
+    Object.keys(DIALOG_FIELD_DEFS).forEach((fieldKey) => {
+      const def = DIALOG_FIELD_DEFS[fieldKey];
+      const value = properties[fieldKey];
+      $(def.input).val(value ?? def.defaultValue);
+    });
+  }
+
+  function buildDialogFieldPayload() {
+    const payload = {};
+    Object.keys(DIALOG_FIELD_DEFS).forEach((fieldKey) => {
+      payload[fieldKey] = DIALOG_FIELD_DEFS[fieldKey].read();
+    });
+    return payload;
+  }
+
   function previewMinHeight() {
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
     const currentPreviewHeight = $("#previewImage").outerHeight() || state.previewHeight;
@@ -82,20 +153,20 @@
   function applyServerState(payload) {
     console.log(payload);
     const prevRevision = state.renderRevision;
-    state.trackWidth = Math.max(100, Number(payload.trackWidth || 1000));
-    state.minRowCount = Math.max(1, Number(payload.minRowCount || state.minRowCount || 3));
-    state.rowCount = Math.max(state.minRowCount, Number(payload.rowCount || state.minRowCount));
-    state.clips = Array.isArray(payload.clips) ? payload.clips : [];
-    state.hasSequence = Boolean(payload.hasSequence);
-    state.hasPlotObjects = Boolean(payload.hasPlotObjects);
-    state.renderRevision = Number(payload.renderRevision || 0);
-    state.sequenceName = payload.sequenceName || null;
+    state.trackWidth = Math.max(100, payload.trackWidth);
+    state.minRowCount = Math.max(1, payload.minRowCount);
+    state.rowCount = Math.max(state.minRowCount, payload.rowCount);
+    state.clips = payload.clips;
+    state.hasSequence = payload.hasSequence;
+    state.hasPlotObjects = payload.hasPlotObjects;
+    state.renderRevision = payload.renderRevision;
+    state.sequenceName = payload.sequenceName;
 
     const existingIds = new Set(state.clips.map((c) => c.id));
     state.selectedClipIds = new Set([...state.selectedClipIds].filter((id) => existingIds.has(id)));
 
     if (state.renderRevision !== prevRevision) {
-      const invalidateFrom = Number(payload.invalidatedFromFrame || 0);
+      const invalidateFrom = payload.invalidatedFromFrame;
       state.renderedFrames = new Set([...state.renderedFrames].filter((f) => f < invalidateFrom));
       state.renderQueue = [];
       state.queuedFrames = new Set();
@@ -152,7 +223,6 @@
   }
 
   function stopSaveVideoMode() {
-    const wasSaving = state.saveVideoPending || state.saveVideoInProgress;
     state.saveVideoPending = false;
     state.saveVideoFileName = null;
     stopPlayback();
@@ -160,7 +230,7 @@
   }
 
   function currentPlaybackSpeed() {
-    return state.playbackSpeedOptions[state.playbackSpeedIndex] || 1;
+    return state.playbackSpeedOptions[state.playbackSpeedIndex];
   }
 
   function setSpeedButtonState() {
@@ -221,7 +291,7 @@
         if (payload.error) {
           throw new Error(payload.error);
         }
-        state.renderRevision = Number(payload.renderRevision || state.renderRevision);
+        state.renderRevision = payload.renderRevision;
         markFrameRendered(item.frame);
 
         if (item.requestId === state.pendingPreviewRequestId) {
@@ -262,7 +332,6 @@
 
   function updatePreview(frameOverride) {
     const frame = Math.round(frameOverride ?? state.pinX);
-    //showStatus(`Frame: ${frame}`);
 
     if (!state.hasSequence || !state.hasPlotObjects) {
       showStatus("Frame preview unavailable: pass seq and plot_objects to GUI_web.GUI(...)");
@@ -300,13 +369,11 @@
       .addClass("track-row")
       .attr("data-row", rowIndex)
       .attr("data-label", `track #${rowIndex + 1}`)
-      .css("width", `${state.trackWidth+4}px`);
   }
 
   function makeAddTrackBar() {
     return $("<div>")
       .addClass("add-track")
-      .css("width", `${state.trackWidth+4}px`)
       .text("+");
   }
 
@@ -324,13 +391,8 @@
     );
   }
 
-  function ensureTrackCount(minRows) {
-    while (state.rowCount < minRows) {
-      state.rowCount += 1;
-    }
-  }
-
   function refreshPinGeometry() {
+    state.pinX = Math.max(0, Math.min(state.trackWidth, Math.round(state.pinX)));
     const timelineHeight = state.rowCount * (state.trackHeight + 2) + 28;
     $("#timelinePin").css({
       left: `${state.pinX}px`,
@@ -344,15 +406,15 @@
       width: `${state.trackWidth}px`,
       height: `${timelineHeight}px`,
     });
-    $("#timeline").css("width", `${state.trackWidth}px`);
+    $("#timeline").css("--timeline-width", `${state.trackWidth}px`);
     $("#frameStrip").css("width", `${state.trackWidth+4}px`);
     updateTimelineResizeHandlePosition();
   }
 
   function updateTimelineResizeHandlePosition() {
-    const handleWidth = $("#timelineResizeHandle").outerWidth() || 8;
+    const handleWidth = $("#timelineResizeHandle").outerWidth();
     const x = state.trackWidth - Math.round(handleWidth / 2) + 10;
-    const h = Math.max(40, state.rowCount * (state.trackHeight + 2));
+    const h = Math.max(40, state.rowCount * (state.trackHeight - 2) - 10);
     $("#timelineResizeHandle").css({
       left: `${x}px`,
       height: `${h}px`,
@@ -525,19 +587,111 @@
   }
 
   function overlapsInRow(rowIndex, x, width, ignoreId) {
+    const ignoreSet = new Set();
+    if (Array.isArray(ignoreId)) {
+      ignoreId.forEach((value) => ignoreSet.add(String(value)));
+    } else if (ignoreId !== undefined && ignoreId !== null) {
+      ignoreSet.add(String(ignoreId));
+    }
+
     const left = x;
     const right = x + width;
     return state.clips.some((clip) => {
       if (clip.row !== rowIndex) {
         return false;
       }
-      if (ignoreId && clip.id === ignoreId) {
+      if (ignoreSet.has(String(clip.id))) {
         return false;
       }
       const cLeft = clip.x;
       const cRight = clip.x + clip.width;
       return left < cRight && right > cLeft;
     });
+  }
+
+  function rowFromClientY(clientY) {
+    const timelineEl = $("#timeline")[0];
+    if (!timelineEl) {
+      return 0;
+    }
+
+    const timelineRect = timelineEl.getBoundingClientRect();
+    const rowSpan = state.trackHeight + 2;
+    const rawRow = Math.floor((clientY - timelineRect.top) / rowSpan);
+    return Math.max(0, Math.min(Math.max(0, state.rowCount - 1), rawRow));
+  }
+
+  function blockingClipsInRow(rowIndex, x, width, ignoreId) {
+    const ignoreSet = new Set();
+    if (Array.isArray(ignoreId)) {
+      ignoreId.forEach((value) => ignoreSet.add(String(value)));
+    } else if (ignoreId !== undefined && ignoreId !== null) {
+      ignoreSet.add(String(ignoreId));
+    }
+
+    const left = x;
+    const right = x + width;
+    return state.clips.filter((clip) => {
+      if (clip.row !== rowIndex) {
+        return false;
+      }
+      if (ignoreSet.has(String(clip.id))) {
+        return false;
+      }
+      const cLeft = clip.x;
+      const cRight = clip.x + clip.width;
+      return left < cRight && right > cLeft;
+    });
+  }
+
+  function resolveDropLeft(rowIndex, width, desiredLeft, ignoreId, alreadyResolvedMoves) {
+    const minLeft = 0;
+    const maxLeft = Math.max(0, state.trackWidth - width);
+    const clampedDesired = Math.max(minLeft, Math.min(maxLeft, Math.round(desiredLeft)));
+    
+    const occupiedRanges = [];
+    if (alreadyResolvedMoves) {
+      alreadyResolvedMoves.forEach((move) => {
+        if (move.nextRow === rowIndex) {
+          occupiedRanges.push({ left: move.nextLeft, right: move.nextLeft + move.clip.width });
+        }
+      });
+    }
+
+    function isBlockedByResolved(left, right) {
+      return occupiedRanges.some((range) => left < range.right && right > range.left);
+    }
+
+    if (!overlapsInRow(rowIndex, clampedDesired, width, ignoreId) && !isBlockedByResolved(clampedDesired, clampedDesired + width)) {
+      return clampedDesired;
+    }
+
+    const candidates = [];
+    blockingClipsInRow(rowIndex, clampedDesired, width, ignoreId).forEach((clip) => {
+      const leftSide = clip.x - width;
+      const rightSide = clip.x + clip.width;
+      if (leftSide >= minLeft && !overlapsInRow(rowIndex, leftSide, width, ignoreId) && !isBlockedByResolved(leftSide, leftSide + width)) {
+        candidates.push(leftSide);
+      }
+      if (rightSide <= maxLeft && !overlapsInRow(rowIndex, rightSide, width, ignoreId) && !isBlockedByResolved(rightSide, rightSide + width)) {
+        candidates.push(rightSide);
+      }
+    });
+
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    candidates.sort((a, b) => {
+      const da = Math.abs(a - clampedDesired);
+      const db = Math.abs(b - clampedDesired);
+      if (da !== db) {
+        return da - db;
+      }
+      return a - b;
+    });
+
+    return candidates[0];
   }
 
   function findAvailableRow(x, width) {
@@ -555,15 +709,24 @@
     let dragging = false;
     let moved = false;
     let startX = 0;
+    let startRow = 0;
     let dragIds = [];
     let originLeftById = {};
+    let originRowById = {};
     let originClipStateById = {};
     const resizeHandlePx = 6;
 
-    function applyGroupPreview(delta) {
+    function applyGroupPreview(deltaX, rowDelta) {
       dragIds.forEach((dragId) => {
-        const left = originLeftById[dragId] + delta;
-        $(`.clip[data-id='${dragId}']`).css("left", `${left}px`);
+        const left = originLeftById[dragId] + deltaX;
+        const originRow = originRowById[dragId] ?? 0;
+        const previewRow = Math.max(0, Math.min(Math.max(0, state.rowCount - 1), originRow + rowDelta));
+        const $clipEl = $(`.clip[data-id='${dragId}']`);
+        const $row = $(`.track-row[data-row='${previewRow}']`);
+        if ($clipEl.length > 0 && $row.length > 0 && $clipEl.parent()[0] !== $row[0]) {
+          $row.append($clipEl);
+        }
+        $clipEl.css("left", `${left}px`);
       });
     }
 
@@ -588,6 +751,7 @@
       }
 
       originLeftById = {};
+      originRowById = {};
       originClipStateById = {};
       dragIds.forEach((dragId) => {
         const dragClip = state.clips.find((c) => c.id === dragId);
@@ -595,12 +759,14 @@
           return;
         }
         originLeftById[dragId] = dragClip.x;
+        originRowById[dragId] = dragClip.row;
         originClipStateById[dragId] = { ...dragClip };
       });
 
       dragging = true;
       moved = false;
       startX = event.pageX;
+      startRow = rowFromClientY(event.clientY);
       state.suppressClipClickUntil = Date.now() + 150;
       event.preventDefault();
     });
@@ -614,10 +780,11 @@
         moved = true;
       }
       const delta = calcAllowedGroupDelta(dragIds, rawDelta);
-      applyGroupPreview(delta);
+      const currentRow = rowFromClientY(event.clientY);
+      applyGroupPreview(delta, currentRow - startRow);
     });
 
-    $(document).on(`mouseup.clipDrag.${id}`, function () {
+    $(document).on(`mouseup.clipDrag.${id}`, function (event) {
       if (!dragging) {
         return;
       }
@@ -632,31 +799,24 @@
       const snappedAnchorLeft = Math.round(anchorLeft / 10) * 10;
       const snappedDelta = snappedAnchorLeft - anchorOrigin;
       const finalDelta = calcAllowedGroupDelta(dragIds, snappedDelta);
+      const finalRowDelta = rowFromClientY(event.clientY) - startRow;
 
       const idSet = new Set(dragIds);
+      const resolvedMoves = [];
       let valid = true;
       dragIds.forEach((dragId) => {
         const clip = originClipStateById[dragId];
         if (!clip) {
           return;
         }
-        const nextLeft = clip.x + finalDelta;
-        const overlap = state.clips.some((other) => {
-          if (other.row !== clip.row) {
-            return false;
-          }
-          if (idSet.has(other.id)) {
-            return false;
-          }
-          const left = nextLeft;
-          const right = nextLeft + clip.width;
-          const oLeft = other.x;
-          const oRight = other.x + other.width;
-          return left < oRight && right > oLeft;
-        });
-        if (overlap) {
+        const nextRow = Math.max(0, (originRowById[dragId] ?? clip.row) + finalRowDelta);
+        const desiredLeft = clip.x + finalDelta;
+        const resolvedLeft = resolveDropLeft(nextRow, clip.width, desiredLeft, dragId, resolvedMoves);
+        if (resolvedLeft === null) {
           valid = false;
+          return;
         }
+        resolvedMoves.push({ clip, nextLeft: resolvedLeft, nextRow });
       });
 
       if (!valid) {
@@ -664,14 +824,12 @@
         return;
       }
 
-      const updates = dragIds.map((dragId) => {
-        const clip = originClipStateById[dragId];
-        const nextLeft = clip.x + finalDelta;
+      const updates = resolvedMoves.map(({ clip, nextLeft, nextRow }) => {
         return apiPost("/api/clip/update", {
           id: clip.id,
           x: nextLeft,
           width: clip.width,
-          row: clip.row,
+          row: nextRow,
         });
       });
 
@@ -827,23 +985,9 @@
           $obj.append($opt);
         });
 
-        const type = String(p.type || "").toLowerCase();
-        const showXY = type === "translate" || type === "scale";
-        const showSE = type === "rotate";
-        const showTween = type === "tween";
-        $("#dlgStartXWrap,#dlgStartYWrap,#dlgEndXWrap,#dlgEndYWrap").toggle(showXY);
-        $("#dlgStartWrap,#dlgEndWrap").toggle(showSE);
-        $("#dlgTweenPropsWrap,#dlgTweenStartsWrap,#dlgTweenEndsWrap").toggle(showTween);
-
-        $("#dlgStartX").val(p.start_x ?? "");
-        $("#dlgStartY").val(p.start_y ?? "");
-        $("#dlgEndX").val(p.end_x ?? "");
-        $("#dlgEndY").val(p.end_y ?? "");
-        $("#dlgStart").val(p.start ?? "");
-        $("#dlgEnd").val(p.end ?? "");
-        $("#dlgTweenProps").val(p.tween_properties ?? "[]");
-        $("#dlgTweenStarts").val(p.tween_starts ?? "[]");
-        $("#dlgTweenEnds").val(p.tween_ends ?? "[]");
+        const typeKey = normalizeClipTypeKey(p.typeKey, p.type);
+        applyDialogSchema(typeKey);
+        fillDialogFields(p);
 
         $("#clipDialogBackdrop").removeClass("hidden");
       })
@@ -868,15 +1012,7 @@
       easing: $("#dlgEasing").val(),
       persistent: $("#dlgPersistent").is(":checked"),
       plotObjectId: Number($("#dlgObject").val() || 0),
-      start_x: Number($("#dlgStartX").val() || 0),
-      start_y: Number($("#dlgStartY").val() || 0),
-      end_x: Number($("#dlgEndX").val() || 0),
-      end_y: Number($("#dlgEndY").val() || 0),
-      start: Number($("#dlgStart").val() || 0),
-      end: Number($("#dlgEnd").val() || 0),
-      tween_properties: $("#dlgTweenProps").val(),
-      tween_starts: $("#dlgTweenStarts").val(),
-      tween_ends: $("#dlgTweenEnds").val(),
+      ...buildDialogFieldPayload(),
     };
 
     apiPost("/api/clip/properties", payload)
@@ -1040,9 +1176,17 @@
     });
   }
 
+  function paletteInternalType($item) {
+    const dataType = String($item.attr("data-type") || "").trim();
+    if (dataType) {
+      return dataType;
+    }
+    return String($item.text() || "Clip").trim();
+  }
+
   function enablePaletteDragDrop() {
     $(document).on("dragstart", ".palette-item", function (event) {
-      const type = $(this).data("type");
+      const type = paletteInternalType($(this));
       event.originalEvent.dataTransfer.setData("text/plain", type);
       event.originalEvent.dataTransfer.effectAllowed = "copy";
     });
@@ -1259,6 +1403,20 @@
     });
 
     $(document).on("keydown", function (event) {
+      const dialogOpen = !$("#clipDialogBackdrop").hasClass("hidden") && Boolean(state.activeDialogClipId);
+      if (dialogOpen) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeClipDialog();
+          return;
+        }
+        if (event.key === "Enter") {
+          event.preventDefault();
+          saveClipDialog();
+          return;
+        }
+      }
+
       if (event.target && ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)) {
         return;
       }
