@@ -47,7 +47,7 @@ class GUI:
         seq=None,
         plot_objects=None,
         min_tracks: int = 3,
-        host: str = "127.0.0.1",
+        host: str = "localhost",
         port: int = 8008,
         open_browser: bool = True,
         auto_start: bool = True,
@@ -923,7 +923,7 @@ class GUI:
             def _serve_static(self, rel_path):
                 rel = rel_path.lstrip("/")
                 if rel == "":
-                    rel = "index.html"
+                    rel = "GUI.html"
                 path = (Path(static_dir) / rel).resolve()
                 base = Path(static_dir).resolve()
                 if not str(path).startswith(str(base)) or not path.is_file():
@@ -1172,7 +1172,7 @@ class GUI:
                 "Try another port."
             ) from exc
 
-        self.url = f"http://{self.host}:{self.port}/index.html"
+        self.url = f"http://{self.host}:{self.port}/GUI.html"
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
         self._thread.start()
 

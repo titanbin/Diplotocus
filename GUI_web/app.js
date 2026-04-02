@@ -198,7 +198,7 @@
     const label = state.isPlaying ? "Pause" : "Play";
     $("#btnPlayPause")
       .text(symbol)
-      .attr("title", `${label} playback`)
+      .attr("title", `${label}`)
       .attr("aria-label", label);
   }
 
