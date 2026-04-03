@@ -364,6 +364,29 @@
     });
   }
 
+  function renderTimelineTicks() {
+    const $ruler = $("#timelineRuler");
+    if ($ruler.length === 0) {
+      return;
+    }
+
+    $ruler.find(".frame-major-tick, .frame-major-label").remove();
+    const visibleWidth = Math.max(state.trackWidth, Math.round($("#timeline").innerWidth() || state.trackWidth));
+
+    for (let frame = 0; frame <= visibleWidth; frame += 60) {
+      $("<div>")
+        .addClass("frame-major-tick")
+        .css("left", `${frame}px`)
+        .appendTo($ruler);
+
+      $("<div>")
+        .addClass("frame-major-label")
+        .css("left", `${frame}px`)
+        .text(String(frame))
+        .appendTo($ruler);
+    }
+  }
+
   function makeTrack(rowIndex) {
     return $("<div>")
       .addClass("track-row")
@@ -408,6 +431,7 @@
     });
     $("#timeline").css("--timeline-width", `${state.trackWidth}px`);
     $("#frameStrip").css("width", `${state.trackWidth+4}px`);
+    renderTimelineTicks();
     updateTimelineResizeHandlePosition();
   }
 
@@ -1032,8 +1056,7 @@
 
   function setPinFromClientX(clientX) {
     const stripRect = $("#frameStrip")[0].getBoundingClientRect();
-    const scrollLeft = $("#timelineViewport").scrollLeft();
-    const x = Math.round(clientX - stripRect.left + scrollLeft);
+    const x = Math.round(clientX - stripRect.left);
     setPinFrame(x, true);
   }
 
@@ -1493,14 +1516,9 @@
       loadDemoProject();
     });
 
-    $("#timelineViewport").on("scroll", function () {
-      const scrollLeft = $(this).scrollLeft();
-      $("#pinLayer").css("transform", `translateX(${-scrollLeft}px)`);
-      $("#frameStrip .frame-indicator").css("transform", `translateX(${-scrollLeft}px)`);
-    });
-
     $(window).on("resize", function () {
       setPreviewHeight(state.previewHeight);
+      renderTimelineTicks();
     });
 
     $("#previewImage").on("load", function () {

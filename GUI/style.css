@@ -168,13 +168,17 @@ button:hover{
 
 .timeline-shell {
 	display: grid;
-	grid-template-columns: 35px 1fr;
+	grid-template-columns: 30px 1fr;
 	height: 100%;
+	position: relative;
 }
 
 #trackControls {
 	padding-top: 20px;
+	position: relative;
+	z-index: 100;
 	margin-right: 5px;
+	background: #171717;
 }
 
 .track-control {
@@ -201,20 +205,58 @@ button:hover{
 .timeline-main {
 	min-width: 0;
 	position: relative;
+	overflow: hidden;
+	z-index: 1;
+}
+
+#timelineHeader {
+	position: relative;
+	height: 33px;
+	width: 100%;
+	min-width: var(--timeline-width, 1000px);
+	z-index: 2;
 }
 
 #frameStrip {
-	position: relative;
-	height: 14px;
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 15px;
+	height: 13px;
 	z-index: 1;
+	overflow: visible;
 }
 
 .frame-indicator {
 	position: absolute;
 	top: 0;
 	width: 2px;
-	height: 12px;
+	height: 13px;
 	background: #0ea35b;
+	z-index: 2;
+}
+
+.frame-major-tick {
+	position: absolute;
+	top: 10px;
+	width: 1px;
+	height: 14px;
+	background: #8a8a8a;
+	opacity: 0.5;
+	z-index: 1;
+}
+
+.frame-major-label {
+	position: absolute;
+	top: -1px;
+	transform: translateX(-50%);
+	font-size: 10px;
+	line-height: 10px;
+	color: #9a9a9a;
+	opacity: 0.5;
+	pointer-events: none;
+	user-select: none;
+	z-index: 3;
 }
 
 #timelineViewport {
@@ -222,12 +264,13 @@ button:hover{
 	overflow-x: auto;
 	padding: 8px;
 	padding-left: 0px;
+	padding-top: 0px;
 	z-index: 2;
 }
 
 #timelineResizeHandle {
 	position: absolute;
-	top: 10px;
+	top: 40px;
 	left: 0;
 	width: 4px;
 	height: 20px;
@@ -245,6 +288,20 @@ button:hover{
 	position: relative;
 	width: 100%;
 	min-width: var(--timeline-width, 1000px);
+	margin-left: 10px;
+}
+
+#timelineRuler {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 4px;
+	height: 20px;
+	width: 100%;
+	min-width: var(--timeline-width, 1000px);
+	overflow: visible;
+	z-index: 2;
+	pointer-events: none;
 }
 
 .track-row {
