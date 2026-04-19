@@ -200,6 +200,8 @@ class Sequence:
         self.x += 1
     
     def save_video(self,path=None,speed=1,ffmpeg_path='ffmpeg',multialpha=False,prerendered=False,clean=True):
+        if self.x == 0:
+            raise UserWarning('No rendered frames, run animate with animations to generate frames !')
         if path is None:
             if self.transparent:
                 path = self.name + '.mov'

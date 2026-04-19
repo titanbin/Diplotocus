@@ -153,6 +153,9 @@ class Animation:
     def anim_function(self,x,kwargs):
         data_x = np.ravel(self.x)
         data_y = np.ravel(self.y)
+        if self.__class__.__name__ == 'errorbar':
+            data_x_err = np.ravel(self.xerr)
+            data_y_err = np.ravel(self.yerr)
 
         #First pass to get frame if sequencing
         for anim in self.anims:
@@ -171,7 +174,9 @@ class Animation:
             _i = min(round(t*len(data_x)) + 1,len(data_x)-1)
             data_x = data_x[_i]
             data_y = data_y[_i]
-
+            if self.__class__.__name__ == 'errorbar':
+                data_x_err = self.data_x_err[_i]
+                data_y_err = self.data_y_err[_i]
 
         #Second pass to cut points if drawing or erasing
         i_max = -1
@@ -198,12 +203,15 @@ class Animation:
             data_x = data_x[:i_max]
             if data_y is not None:
                 data_y = data_y[:i_max]
+            if self.__class__.__name__ == 'errorbar':
+                data_x_err = data_x_err[:i_max]
+                data_y_err = data_y_err[:i_max]
             if 'c' in kwargs and isinstance(kwargs['c'],(list,np.ndarray)):
                 kwargs['c'] = kwargs['c'][:i_max]
 
-        #Third pass to morph or demorph
+        #Third pass to morph
         for anim in self.anims:
-            if anim['name'] not in ['morph','demorph']:
+            if anim['name'] != 'morph':
                 continue
             if self.x is None:
                 continue
@@ -212,22 +220,27 @@ class Animation:
                 continue
             if data_x is None or data_y is None:
                 continue
-            if anim['name'] == 'morph':
-                new_data_x = []
-                new_data_y = []
-                for i in range(len(data_x)):
-                    new_data_x.append(data_x[i] + (anim['new_x'][i] - data_x[i])*t)
-                    new_data_y.append(data_y[i] + (anim['new_y'][i] - data_y[i])*t)
-                data_x = new_data_x
-                data_y = new_data_y
-            if anim['name'] == 'demorph':
-                new_data_x = []
-                new_data_y = []
-                for i in range(len(data_x)):
-                    new_data_x.append(data_x[i] + (anim['new_x'][i] - data_x[i])*(1-t))
-                    new_data_y.append(data_y[i] + (anim['new_y'][i] - data_y[i])*(1-t))
-                data_x = new_data_x
-                data_y = new_data_y
+            
+            new_data_x = []
+            new_data_y = []
+            for i in range(len(data_x)):
+                new_data_x.append(data_x[i] + (anim['new_x'][i] - data_x[i])*t)
+                new_data_y.append(data_y[i] + (anim['new_y'][i] - data_y[i])*t)
+            data_x = new_data_x
+            data_y = new_data_y
+
+            if self.__class__.__name__ == 'errorbar':
+                new_data_x_err = []
+                new_data_y_err = []
+                for i in range(len(data_x_err)):
+                    new_data_x_err.append(data_x_err[i] + (anim['new_x_err'][i] - data_x_err[i])*t)
+                    new_data_y_err.append(data_y_err[i] + (anim['new_y_err'][i] - data_y_err[i])*t)
+                data_x_err = new_data_x_err
+                data_y_err = new_data_y_err
+        
+        if self.__class__.__name__ == 'errorbar':
+            kwargs['xerr'] = data_x_err
+            kwargs['yerr'] = data_y_err
         
         if self.function is not None:
             self.function(data_x,data_y,x,kwargs)
@@ -507,16 +520,6 @@ class Animation:
             'persistent':persistent
         })
         self.compute_timings()
-        return self
-    
-    def demorph(self,duration,delay=0,easing=None,persistent=True):
-        self.anims.append({
-            'name':'demorph',
-            'duration':duration,
-            'delay':delay,
-            'easing':easing,
-            'persistent':persistent
-        })
         return self
     
     def sequence(self,duration,delay=0,easing=None,persistent=True):
@@ -803,7 +806,29 @@ class axis_move(Animation):
         self.axis.set_ylim(pos_y-height/2,pos_y+height/2)
 
 class axis_alpha(Animation):
+    """
+    Change the opacity of the axis.
 
+    Parameters
+    ----------
+    start_alpha : float
+        Initial alpha value
+    end_alpha : float
+        Final alpha value
+    duration : float
+        Duration of the animation
+    delay : float, default=0
+        Delay before starting
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
+
+    Example
+    --------
+    Make the axis appear in 100 frames
+        >>> axis_alpha(start_alpha=0,end_alpha=1,duration=100)
+    """
     def __init__(self,start_alpha,end_alpha,duration,delay=0,easing=easings.easeLinear(),axis=None,*args,**kwargs):
         super().__init__(axis=axis,*args, **kwargs)
         self.anims = [{
@@ -1766,6 +1791,8 @@ class fill_between(Animation):
         This is the :ref:`pyplot wrapper <pyplot_interface>` for `.axes.Axes.fill_between`.
     """
     def __init__(self,x,y1,y2, *args, **kwargs):
+        self.mpl_obj_type = mpl.collections.Collection
+        self.mpl_plot_type = plt.fill_between
         super().__init__(*args, **kwargs)
         self.x = np.ravel(x)
         self.y1 = np.ravel(y1)
@@ -1944,51 +1971,44 @@ class fill_betweenx(Animation):
     .. note::
 
         This is the :ref:`pyplot wrapper <pyplot_interface>` for `.axes.Axes.fill_betweenx`.
-    """
+    """    
     def __init__(self,y,x1,x2, *args, **kwargs):
+        self.mpl_obj_type = mpl.collections.Collection
+        self.mpl_plot_type = plt.fill_betweenx
         super().__init__(*args, **kwargs)
         self.y = np.array(y)
         self.x1 = np.array(x1).reshape(-1)
         self.x2 = np.array(x2).reshape(-1)
         if self.x1.size != self.y.size:
-            self.x1 = np.ones_like(self.y[0])*self.x1[0]
+            self.x1 = np.ones_like(self.y)*self.x1[0]
         if self.x2.size != self.y.size:
-            self.x2 = np.ones_like(self.y[0])*self.x2[0]
+            self.x2 = np.ones_like(self.y)*self.x2[0]
+
+    def clean(self,x,clear_anims=True):
+        if self.obj is not None and self.base_color is None:
+            self.base_color = self.obj.get_facecolor()
+            if 'facecolor' not in self.kwargs:
+                self.kwargs['facecolor'] = self.base_color
+        super().clean(x,clear_anims)
     
-    def function(self,t,kwargs):
-        y = self.y
+    def function(self,data_x,data_y,x,kwargs):
         x1 = self.x1
         x2 = self.x2
-        
-        if 'draw' in self.anims:
-            i_max = min(round(t*len(self.y)) + 1,len(self.y))
-            y = self.y[:i_max]
-            x1 = self.x1[:i_max]
-            x2 = self.x2[:i_max]
-            if 'color' in kwargs:
-                kwargs['color'] = kwargs['color'][:i_max]
-        if 'erase' in self.anims:
-            i_max = max(round((1-t)*len(self.y)),0)
-            y = self.y[:i_max]
-            x1 = self.x1[:i_max]
-            x2 = self.x2[:i_max]
-            if 'color' in kwargs:
-                kwargs['color'] = kwargs['color'][:i_max]
-        if 'grow' in self.anims:
-            widths = self.x2 - self.x1
-            centers = (self.x2 + self.x1)/2
-            y = self.y
-            x1 = centers - t*widths/2
-            x2 = centers + t*widths/2
-        if 'shrink' in self.anims:
-            widths = self.x2 - self.x1
-            centers = (self.x2 + self.x1)/2
-            y = self.y
-            x1 = centers - (1-t)*widths/2
-            x2 = centers + (1-t)*widths/2
-        
-        self.obj = self.axis.fill_betweenx(y=y,x1=x1,x2=x2,**kwargs)
 
+        for anim in self.anims:
+            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
+            if t < 0 or t > 1:
+                continue
+            i_max = len(self.y)
+            if anim['name'] == 'draw':
+                i_max = min(round(t*len(self.y)) + 1,len(self.y))
+            if anim['name'] == 'erase':
+                i_max = max(round((1-t)*len(self.y)),0)
+            x1 = x1[:i_max]
+            x2 = x2[:i_max]
+        
+        self.obj = self.axis.fill_betweenx(x=data_x,x1=x1,x2=x2,**kwargs)
+    
 class axvline(Animation):
     """
     Add a vertical line spanning the whole or fraction of the Axes.
@@ -2114,19 +2134,94 @@ class axvline(Animation):
         >>> axvline(x=.5, ymin=0.25, ymax=0.75)
     """
     def __init__(self, x, *args, **kwargs):
+        self.mpl_obj_type = mpl.lines.Line2D
+        self.mpl_plot_type = plt.axvline
         super().__init__(*args, **kwargs)
         self.x = x
     
-    def function(self,t,kwargs):
-        x = self.x
-        y_max = 1
+    def function(self,data_x,data_y,x,kwargs):
+        if 'ymax' in kwargs:
+            kwargs['ymax'] = kwargs['ymax'][0]
+        if 'ymin' in kwargs:
+            kwargs['ymin'] = kwargs['ymin'][0]
+        self.obj = self.axis.axvline(data_x,**kwargs)
 
-        if 'draw' in self.anims:
-            y_max = t
-        if 'erase' in self.anims:
-            y_max = (1-t)
+class axhline(Animation):
+    """
+    Add a horizontal line spanning the whole or fraction of the Axes.
 
-        self.obj = self.axis.axvline(x,ymin=0,ymax=y_max,**kwargs)
+    Note: If you want to set x-limits in data coordinates, use
+    `~.Axes.hlines` instead.
+
+    Parameters
+    ----------
+    y : float, default: 0
+        y position in :ref:`data coordinates <coordinate-systems>`.
+
+    xmin : float, default: 0
+        The start x-position in :ref:`axes coordinates <coordinate-systems>`.
+        Should be between 0 and 1, 0 being the far left of the plot,
+        1 the far right of the plot.
+
+    xmax : float, default: 1
+        The end x-position in :ref:`axes coordinates <coordinate-systems>`.
+        Should be between 0 and 1, 0 being the far left of the plot,
+        1 the far right of the plot.
+
+    Returns
+    -------
+    `~matplotlib.lines.Line2D`
+        A `.Line2D` specified via two points ``(xmin, y)``, ``(xmax, y)``.
+        Its transform is set such that *x* is in
+        :ref:`axes coordinates <coordinate-systems>` and *y* is in
+        :ref:`data coordinates <coordinate-systems>`.
+
+        This is still a generic line and the horizontal character is only
+        realized through using identical *y* values for both points. Thus,
+        if you want to change the *y* value later, you have to provide two
+        values ``line.set_ydata([3, 3])``.
+
+    Other Parameters
+    ----------------
+    **kwargs
+        Valid keyword arguments are `.Line2D` properties, except for
+        'transform':
+
+        %(Line2D:kwdoc)s
+
+    See Also
+    --------
+    hlines : Add horizontal lines in data coordinates.
+    axhspan : Add a horizontal span (rectangle) across the axis.
+    axline : Add a line with an arbitrary slope.
+
+    Examples
+    --------
+    * draw a thick red hline at 'y' = 0 that spans the xrange::
+
+        >>> axhline(linewidth=4, color='r')
+
+    * draw a default hline at 'y' = 1 that spans the xrange::
+
+        >>> axhline(y=1)
+
+    * draw a default hline at 'y' = .5 that spans the middle half of
+        the xrange::
+
+        >>> axhline(y=.5, xmin=0.25, xmax=0.75)
+    """
+    def __init__(self, y, *args, **kwargs):
+        self.mpl_obj_type = mpl.lines.Line2D
+        self.mpl_plot_type = plt.axvline
+        super().__init__(*args, **kwargs)
+        self.y = y
+    
+    def function(self,data_x,data_y,x,kwargs):
+        if 'xmax' in kwargs:
+            kwargs['xmax'] = kwargs['xmax'][0]
+        if 'xmin' in kwargs:
+            kwargs['xmin'] = kwargs['xmin'][0]
+        self.obj = self.axis.axhline(data_x,**kwargs)
 
 class errorbar(Animation):
     """
@@ -2325,6 +2420,8 @@ class errorbar(Animation):
         This is the :ref:`pyplot wrapper <pyplot_interface>` for `.axes.Axes.errorbar`.
     """
     def __init__(self,x,y,xerr=None,yerr=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.lines.Line2D
+        self.mpl_plot_type = plt.axvline
         super().__init__(*args, **kwargs)
         self.x = x
         self.y = y
@@ -2338,68 +2435,39 @@ class errorbar(Animation):
     def clean(self,x,clear_anims=True):
         if self.obj is not None and self.base_color is None:
             self.base_color = self.obj[0].get_color()
+            if 'color' not in self.kwargs:
+                self.kwargs['color'] = self.base_color
         super().clean(x,clear_anims)
 
-    def morph(self,new_x,new_y,new_xerr,new_yerr,new_alpha=None):
-        # TODO : if new_x/new_y not the same size, resample them to match
-        self.new_x = new_x
-        self.new_y = new_y
-        self.new_xerr = new_xerr
-        self.new_yerr = new_yerr
-        if isinstance(self.new_x,numbers.Number):
-            self.new_x = [self.new_x]
-            self.new_y = [self.new_y]
-            self.new_xerr = [self.new_xerr]
-            self.new_yerr = [self.new_yerr]
-        self.new_alpha = new_alpha
-        if 'morph' not in self.anims:
-            self.anims.append('morph')
+    def morph(self,new_x,new_y,duration,new_xerr=None,new_yerr=None,delay=0,easing=None,persistent=True):
+        if new_xerr is None:
+            new_xerr = self.xerr
+        if new_yerr is None:
+            new_yerr = self.yerr
+        if isinstance(new_x,numbers.Number):
+            new_x = [new_x]
+            new_y = [new_y]
+            new_xerr = [new_xerr]
+            new_yerr = [new_yerr]
+        
+        self.anims.append({
+            'name':'morph',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'new_x':new_x,
+            'new_y':new_y,
+            'new_x_err':new_xerr,
+            'new_y_err':new_yerr,
+            'persistent':persistent
+        })
+        self.compute_timings()
         return self
     
-    def function(self,t,kwargs):
-        x = self.x
-        y = self.y
-        xerr = self.xerr
-        yerr = self.yerr
-        
-        if 'draw' in self.anims:
-            i_max = min(round(t*len(self.x)) + 1,len(self.x))
-            x = self.x[:i_max]
-            y = self.y[:i_max]
-            xerr = self.xerr[:i_max]
-            yerr = self.yerr[:i_max]
-            if 'color' in kwargs and isinstance(kwargs['color'],(list,np.ndarray)):
-                kwargs['color'] = kwargs['color'][:i_max]
-        if 'erase' in self.anims:
-            i_max = max(round((1-t)*len(self.x)),0)
-            x = self.x[:i_max]
-            y = self.y[:i_max]
-            xerr = self.xerr[:i_max]
-            yerr = self.yerr[:i_max]
-            if 'color' in kwargs and isinstance(kwargs['color'],(list,np.ndarray)):
-                kwargs['color'] = kwargs['color'][:i_max]
-        if 'morph' in self.anims:
-            x = []
-            y = []
-            xerr = []
-            yerr = []
-            for i in range(len(self.x)):
-                x.append(self.x[i] + (self.new_x[i] - self.x[i])*t)
-                y.append(self.y[i] + (self.new_y[i] - self.y[i])*t)
-                xerr.append(self.xerr[i] + (self.new_xerr[i] - self.xerr[i])*t)
-                yerr.append(self.yerr[i] + (self.new_yerr[i] - self.yerr[i])*t)
-        if 'demorph' in self.anims:
-            x = []
-            y = []
-            xerr = []
-            yerr = []
-            for i in range(len(self.x)):
-                x.append(self.x[i] + (self.new_x[i] - self.x[i])*(1-t))
-                y.append(self.y[i] + (self.new_y[i] - self.y[i])*(1-t))
-                xerr.append(self.xerr[i] + (self.new_xerr[i] - self.xerr[i])*(1-t))
-                yerr.append(self.yerr[i] + (self.new_yerr[i] - self.yerr[i])*(1-t))
-        
-        self.obj = self.axis.errorbar(x,y,xerr=xerr,yerr=yerr,**kwargs)
+    def function(self,data_x,data_y,x,kwargs):
+        obj = self.axis.errorbar(data_x,data_y,**kwargs)
+        obj = [obj.lines[0]] + list(obj.lines[1]) + list(obj.lines[2])
+        self.obj = obj
 
 class hist(Animation):
     """

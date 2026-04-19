@@ -358,6 +358,12 @@ button:hover{
     filter: brightness(1);
 }
 
+.clip span{
+	font-weight: normal;
+	color: rgb(222, 222, 222);
+	font-style: italic;
+}
+
 .clip.selected{
 	filter: brightness(0.75) contrast(1.1);
 }

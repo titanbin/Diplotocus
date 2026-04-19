@@ -205,12 +205,35 @@ class GUI:
     def _serialize_clips(self):
         clips = []
         for clip_id, anim in self._clip_id_to_anim.items():
+            anim = self._clip_id_to_anim.get(clip_id)
+            if anim is None:
+                raise KeyError(f"Unknown clip id: {clip_id}")
+            clip_type = self._clip_type_for_clip(clip_id, anim)
+            
+            object_options = ["None"]
+            for obj in self.plot_objects:
+                if not self._is_selectable_plot_entry(obj):
+                    continue
+                if clip_type == "morph" and not ("new_x" in obj and "new_y" in obj):
+                    continue
+                object_options.append(obj["name"])
+            
+            if clip_type in SPECIAL_CLIP_TYPES:
+                current_object_id = 0
+            elif clip_id in self._clip_id_to_owner:
+                owner_index = self._clip_id_to_owner.get(clip_id)
+                current_object_id = 0 if owner_index is None else owner_index + 1
+            else:
+                owner_index = self._find_clip_owner_index(clip_id)
+                current_object_id = 0 if owner_index is None else owner_index + 1
+
             clip = {
                 "id": clip_id,
                 "type": self._type_from_anim(clip_id, anim),
                 "x": _safe_int(anim.get("delay", 0)),
                 "width": max(1, _safe_int(anim.get("duration", 1))),
                 "row": self._clip_rows.get(clip_id, 0),
+                "plotObjectName":object_options[current_object_id]
             }
             clips.append(clip)
 

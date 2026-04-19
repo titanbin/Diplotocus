@@ -151,7 +151,6 @@
   }
 
   function applyServerState(payload) {
-    console.log(payload);
     const prevRevision = state.renderRevision;
     state.trackWidth = Math.max(100, payload.trackWidth);
     state.minRowCount = Math.max(1, payload.minRowCount);
@@ -455,11 +454,15 @@
       if ($row.length === 0) {
         return;
       }
+      var clipHTML = clip.type;
+      if (clip.plotObjectName != "None"){
+        clipHTML += '<br/><span>' + clip.plotObjectName + '</span>';
+      }
       const $clip = $("<div>")
         .addClass("clip").addClass(clip.type)
         .attr("data-id", clip.id)
         .css({ left: `${clip.x}px`, width: `${clip.width}px` })
-        .text(clip.type);
+        .html(clipHTML);
       if (state.selectedClipIds.has(clip.id)) {
         $clip.addClass("selected");
       }
