@@ -257,3 +257,6 @@ class Sequence:
 #have to, as initialisation, replace the specific axis with the new one (save old axis in Sequence, find index of specific axis in old axes, get new axis using index)
 #TODO : update all functions past plot so that function() takes x not t, and loop over all anims and compute each t
 #depending on the anim xmin and xmax (delay and duration).
+#TODO : add sequence (one-by-one drawing) to GUI.
+#TODO : contourf is a mess to implement, because it can receive different arguments (X,Y,Z). So far only z implemented.
+#(morph especially is kinda lame now, it just adds bins in order)

@@ -2686,6 +2686,7 @@ class hist(Animation):
         self.mpl_plot_type = plt.hist
         super().__init__(*args, **kwargs)
         self.x = np.ravel(x)
+        self.y = np.zeros_like(self.x)
 
     def clean(self,x,clear_anims=True):
         if self.obj is not None and self.base_color is None:
@@ -2694,18 +2695,33 @@ class hist(Animation):
                 self.kwargs['color'] = self.base_color
         super().clean(x,clear_anims)
     
-    def function(self,t,kwargs):
-        i_max = len(self.x)
-        for anim in self.anims:
-            if anim['name'] == 'draw':
-                i_max = min(round(t*len(self.x)) + 1,len(self.x))
-            elif anim['name'] == 'erase':
-                i_max = max(round((1-t)*len(self.x)),0)
+    def morph(self,new_x,duration,delay=0,easing=None,persistent=True):
+        if isinstance(new_x,numbers.Number):
+            new_x = [new_x]
         
-        x = self.x[:i_max]
+        self.anims.append({
+            'name':'morph',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'new_x':new_x,
+            'new_y':np.zeros_like(self.y),
+            'persistent':persistent
+        })
+        self.compute_timings()
+        return self
+
+    def function(self,data_x,data_y,x,kwargs):
+        if isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        
+        if 'bins' in kwargs:
+            kwargs['bins'] = np.ravel(kwargs['bins'])
+
         if 'bins' in kwargs and len(kwargs['bins']) == 1:
             kwargs['bins'] = int(kwargs['bins'][0])
-        h,edges,self.obj = self.axis.hist(x,**kwargs)
+        
+        h,edges,self.obj = self.axis.hist(data_x,**kwargs)
 
 class hist2d(Animation):
     """
@@ -2837,28 +2853,30 @@ class hist2d(Animation):
       in effect to gamma correction) can be accomplished with
       `.colors.PowerNorm`.
     """
-    def __init__(self,x,y,bins=None,range=None, *args, **kwargs):
+    def __init__(self,x,y, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Rectangle
+        self.mpl_plot_type = plt.hist2d
         super().__init__(*args, **kwargs)
-        self.x = x
-        self.y = y
-        self.bins = bins
-        self.range = range
+        self.x = np.ravel(x)
+        self.y = np.ravel(y)
     
-    def function(self,t,kwargs):
-        i_max = len(self.x)
-
-        if 'draw' in self.anims:
-            i_max = min(round(t*len(self.x)) + 1,len(self.x))
-        if 'erase' in self.anims:
-            i_max = max(round((1-t)*len(self.x)),0)
+    def function(self,data_x,data_y,x,kwargs):
+        if isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
         
-        x = self.x[:i_max]
-        y = self.y[:i_max]
+        if 'bins' in kwargs:
+            kwargs['bins'] = np.ravel(kwargs['bins'])
 
-        #Have to reset xlim and ylim because contourf does not respect the imposed limits
+        if 'bins' in kwargs and len(kwargs['bins']) == 1:
+            kwargs['bins'] = int(kwargs['bins'][0])
+        
+        if 'color' in kwargs:
+            kwargs.pop('color')
+
+        #Have to reset xlim and ylim because hist2d does not respect the imposed limits
         old_xlim = self.axis.get_xlim()
         old_ylim = self.axis.get_ylim()
-        h,xedges,yedges,self.obj = self.axis.hist2d(x,y,bins=self.bins,range=self.range,**kwargs)
+        h,xedges,yedges,self.obj = self.axis.hist2d(data_x,data_y,**kwargs)
         self.axis.set_xlim(old_xlim)
         self.axis.set_ylim(old_ylim)
 
@@ -3152,16 +3170,55 @@ class contourf(Animation):
        compute contour locations.  More information can be found in
        `ContourPy documentation <https://contourpy.readthedocs.io>`_.
     """
-    def __init__(self,z,levels=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.z = z
-        self.levels = levels
-    
-    def function(self,t,kwargs):
+    def __init__(self, z, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Rectangle
+        self.mpl_plot_type = plt.contourf
+        super().__init__(**kwargs)
+        self.x = z
+        self.y = np.zeros_like(z)
+        self.init_shape = z.shape
+
+    def chunks(self,l, n):
+        for i in range(0, len(l), n):
+            yield l[i:i + n]
+
+    def morph(self,new_z,duration,delay=0,easing=None,persistent=True):
+        self.anims.append({
+            'name':'morph',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'new_x':np.ravel(new_z),
+            'new_y':np.ravel(np.zeros_like(self.x)),
+            'persistent':persistent
+        })
+        self.compute_timings()
+        return self
+
+    def function(self,data_x,data_y,x,kwargs):
+        if isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        
+        if 'bins' in kwargs:
+            kwargs['bins'] = np.ravel(kwargs['bins'])
+
+        if 'bins' in kwargs and len(kwargs['bins']) == 1:
+            kwargs['bins'] = int(kwargs['bins'][0])
+        
+        if 'color' in kwargs:
+            kwargs.pop('color')
+
+        if len(np.array(data_x).shape) == 1:
+            new_data_x = np.zeros(self.init_shape)
+            for i in range(0, len(data_x)):
+                new_data_x[i//self.init_shape[0],i%self.init_shape[0]] = data_x[i]
+            data_x = new_data_x
+        
         #Have to reset xlim and ylim because contourf does not respect the imposed limits
         old_xlim = self.axis.get_xlim()
         old_ylim = self.axis.get_ylim()
-        self.obj = self.axis.contourf(self.z,levels=self.levels,**kwargs)
+        z = data_x
+        self.obj = self.axis.contourf(z,**kwargs)
         self.axis.set_xlim(old_xlim)
         self.axis.set_ylim(old_ylim)
 
