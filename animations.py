@@ -87,7 +87,7 @@ class Animation:
         return alias_map
 
     def get_possible_kwargs(self):
-        if self.mpl_obj_type is None:
+        if self.mpl_obj_type is None or self.mpl_plot_type is None:
             return {}
         sig = inspect.signature(self.mpl_obj_type)
         kwargs = [
@@ -171,7 +171,7 @@ class Animation:
                 data_x = data_x.reshape((-1,1))
                 data_y = data_y.reshape((-1,1))
             
-            _i = min(round(t*len(data_x)) + 1,len(data_x)-1)
+            _i = min(round(t*len(data_x)),len(data_x)-1)
             data_x = data_x[_i]
             data_y = data_y[_i]
             if self.__class__.__name__ == 'errorbar':
@@ -194,7 +194,7 @@ class Animation:
                     kwargs['alpha'] = 1
 
             if anim['name'] == 'draw':
-                i_max = min(round(t*len(data_x)) + 1,len(data_x))
+                i_max = min(round(t*len(data_x)),len(data_x))
             elif anim['name'] == 'erase':
                 i_max = max(round((1-t)*len(data_x)),0)
             break
@@ -534,6 +534,14 @@ class Animation:
         return self
 
     def clean(self,x,clear_anims=True):
+        if self.obj is not None and self.base_color is None:
+            if isinstance(self.obj,(list,np.ndarray)):
+                self.base_color = self.obj[0].get_color()    
+            elif hasattr(self.obj,'get_color'):
+                self.base_color = self.obj.get_color()
+            if 'color' not in self.kwargs and self.base_color is not None:
+                self.kwargs['color'] = self.base_color
+
         for anim in self.anims:
             if anim['easing'] is None:
                 if self.easing is not None:
@@ -1545,13 +1553,6 @@ class plot(Animation):
         if self.x.size != self.y.size:
             raise ValueError("x and y must be the same size")
 
-    def clean(self,x,clear_anims=True):
-        if self.obj is not None and self.base_color is None:
-            self.base_color = self.obj[0].get_color()
-            if 'color' not in self.kwargs:
-                self.kwargs['color'] = self.base_color
-        super().clean(x,clear_anims)
-
     def function(self,data_x,data_y,x,kwargs):
         if isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
@@ -1631,13 +1632,6 @@ class step(Animation):
         self.y = np.ravel(y)
         if self.x.size != self.y.size:
             raise ValueError("x and y must be the same size")
-
-    def clean(self,x,clear_anims=True):
-        if self.obj is not None and self.base_color is None:
-            self.base_color = self.obj[0].get_color()
-            if 'color' not in self.kwargs:
-                self.kwargs['color'] = self.base_color
-        super().clean(x,clear_anims)
 
     def function(self,data_x,data_y,x,kwargs):
         if isinstance(kwargs['alpha'],np.ndarray):
@@ -2432,13 +2426,6 @@ class errorbar(Animation):
         self.xerr = xerr
         self.yerr = yerr
 
-    def clean(self,x,clear_anims=True):
-        if self.obj is not None and self.base_color is None:
-            self.base_color = self.obj[0].get_color()
-            if 'color' not in self.kwargs:
-                self.kwargs['color'] = self.base_color
-        super().clean(x,clear_anims)
-
     def morph(self,new_x,new_y,duration,new_xerr=None,new_yerr=None,delay=0,easing=None,persistent=True):
         if new_xerr is None:
             new_xerr = self.xerr
@@ -2859,6 +2846,13 @@ class hist2d(Animation):
         super().__init__(*args, **kwargs)
         self.x = np.ravel(x)
         self.y = np.ravel(y)
+
+    def clean(self,x,clear_anims=True):
+        if self.obj is not None and self.base_color is None:
+            self.base_color = self.obj[0].get_facecolor()
+            if 'color' not in self.kwargs:
+                self.kwargs['color'] = self.base_color
+        super().clean(x,clear_anims)
     
     def function(self,data_x,data_y,x,kwargs):
         if isinstance(kwargs['alpha'],np.ndarray):
@@ -3178,9 +3172,12 @@ class contourf(Animation):
         self.y = np.zeros_like(z)
         self.init_shape = z.shape
 
-    def chunks(self,l, n):
-        for i in range(0, len(l), n):
-            yield l[i:i + n]
+    def clean(self,x,clear_anims=True):
+        if self.obj is not None and self.base_color is None:
+            self.base_color = self.obj[0].get_facecolor()
+            if 'color' not in self.kwargs:
+                self.kwargs['color'] = self.base_color
+        super().clean(x,clear_anims)
 
     def morph(self,new_z,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
@@ -3354,22 +3351,32 @@ class text(Animation):
         self.x = x
         self.y = y
         self.string = string
-        self.string = np.ravel(self.string)
-    
-    def function(self,t,kwargs):
-        s = self.string[0]
 
-        if 'update' in self.anims:
-            i = min(round(t*len(self.string)) + 1,len(self.string))
-            s = self.string[i]
-        if 'deupdate' in self.anims:
-            i = max(round((1-t)*len(self.string)),0)
-            s = self.string[i]
+    def anim_function(self,x,kwargs):
+        s = self.string
+        for anim in self.anims:
+            if anim['name'] not in ['draw','erase','sequence']:
+                continue
+            t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
+            if anim['name'] == 'sequence':
+                if t < 0 or t > 1:
+                    continue
+                _i = min(round(t*len(s)),len(s)-1)
+                s = s[_i]
+            elif anim['name'] == 'draw':
+                i_max = min(round(t*len(s)),len(s))
+                s = s[:i_max]
+            elif anim['name'] == 'erase':
+                i_max = max(round((1-t)*len(s)),0)
+                s = s[:i_max]
+        
+        self.function(self.x,self.y,s,kwargs)
 
-        self.obj = self.axis.text(x=self.x,y=self.y,s=s,**kwargs)
+    def function(self,data_x,data_y,s,kwargs):
+        self.obj = self.axis.text(x=data_x,y=data_y,s=s,**kwargs)
 
 class svg(Animation):
-    def __init__(self,data, fc=None, ec='k', lw=2, *args, **kwargs):
+    def __init__(self, data, fc=None, ec='k', lw=2, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.PathPatch
         super().__init__(*args, **kwargs)
         self.data = data
@@ -3378,12 +3385,14 @@ class svg(Animation):
         self.lw = lw
         self.path = None
 
-    def draw_svg(self):
+    def draw_svg(self,kwargs):
         self.path = parse_path(self.data)
-        self.obj = mpl.patches.PathPatch(self.path,facecolor=self.fc,edgecolor=self.ec,lw=self.lw)
+        self.obj = mpl.patches.PathPatch(self.path,facecolor=self.fc,edgecolor=self.ec,lw=self.lw,**kwargs)
         self.axis.add_patch(self.obj)
 
-    def function(self,t,kwargs):
+    def function(self,data_x,data_y,x,kwargs):
+        if isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
         if self.fc is None:
             self.fc = self.axis._get_lines.get_next_color()
-        self.draw_svg()
+        self.draw_svg(kwargs)

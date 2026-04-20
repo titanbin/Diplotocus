@@ -248,15 +248,3 @@ class Sequence:
     def save_project(self,path):
         with open(path, 'wb') as f:
             pickle.dump(self, f)
-
-
-#TODO : implementing blitting as in https://matplotlib.org/stable/users/explain/animations/blitting.html
-#has to be an option on the sequence Class, as it can only draw objects on top of the saved background.
-#TODO : implement deepcopy of fig so that we can rerun the same code of Sequence without having to reinitialize the fig, because it changes in the sequence code
-#code implemented in the init of sequence, but the axes are regenerated from the copied figure, so if some anims use a specific axis, it does not exist anymore.
-#have to, as initialisation, replace the specific axis with the new one (save old axis in Sequence, find index of specific axis in old axes, get new axis using index)
-#TODO : update all functions past plot so that function() takes x not t, and loop over all anims and compute each t
-#depending on the anim xmin and xmax (delay and duration).
-#TODO : add sequence (one-by-one drawing) to GUI.
-#TODO : contourf is a mess to implement, because it can receive different arguments (X,Y,Z). So far only z implemented.
-#(morph especially is kinda lame now, it just adds bins in order)
