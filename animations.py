@@ -156,6 +156,12 @@ class Animation:
         if self.__class__.__name__ == 'errorbar':
             data_x_err = np.ravel(self.xerr)
             data_y_err = np.ravel(self.yerr)
+        elif self.__class__.__name__ == 'fill_between':
+            y1 = np.ravel(self.y1)
+            y2 = np.ravel(self.y2)
+        elif self.__class__.__name__ == 'fill_betweenx':
+            x1 = np.ravel(self.x1)
+            x2 = np.ravel(self.x2)
 
         #First pass to get frame if sequencing
         for anim in self.anims:
@@ -164,19 +170,26 @@ class Animation:
             if self.x is None:
                 continue
             t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
-            if t < 0 or t > 1:
+            if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                 continue
 
             if len(data_x.shape) == 1:
                 data_x = data_x.reshape((-1,1))
                 data_y = data_y.reshape((-1,1))
             
-            _i = min(round(t*len(data_x)),len(data_x)-1)
+            _i = max(min(round(t*len(data_x)),len(data_x)-1),0)
             data_x = data_x[_i]
             data_y = data_y[_i]
+            
             if self.__class__.__name__ == 'errorbar':
-                data_x_err = self.data_x_err[_i]
-                data_y_err = self.data_y_err[_i]
+                data_x_err = data_x_err[_i]
+                data_y_err = data_y_err[_i]
+            elif self.__class__.__name__ == 'fill_between':
+                y1 = y1[_i]
+                y2 = y2[_i]
+            elif self.__class__.__name__ == 'fill_betweenx':
+                x1 = x1[_i]
+                x2 = x2[_i]
 
         #Second pass to cut points if drawing or erasing
         i_max = -1
@@ -186,7 +199,7 @@ class Animation:
             if self.x is None:
                 continue
             t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
-            if t < 0 or t > 1:
+            if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                 continue
             if 'alpha' in kwargs:
                 alpha = np.ravel(kwargs['alpha'])
@@ -206,8 +219,28 @@ class Animation:
             if self.__class__.__name__ == 'errorbar':
                 data_x_err = data_x_err[:i_max]
                 data_y_err = data_y_err[:i_max]
+            elif self.__class__.__name__ == 'fill_between':
+                y1 = y1[:i_max]
+                y2 = y2[:i_max]
+            elif self.__class__.__name__ == 'fill_betweenx':
+                x1 = x1[:i_max]
+                x2 = x2[:i_max]
             if 'c' in kwargs and isinstance(kwargs['c'],(list,np.ndarray)):
                 kwargs['c'] = kwargs['c'][:i_max]
+        elif i_max == 0:
+            data_x = []
+            data_y = []
+            if self.__class__.__name__ == 'errorbar':
+                data_x_err = []
+                data_y_err = []
+            elif self.__class__.__name__ == 'fill_between':
+                y1 = []
+                y2 = []
+            elif self.__class__.__name__ == 'fill_betweenx':
+                x1 = []
+                x2 = []
+            if 'c' in kwargs and isinstance(kwargs['c'],(list,np.ndarray)):
+                kwargs['c'] = []
 
         #Third pass to morph
         for anim in self.anims:
@@ -216,7 +249,7 @@ class Animation:
             if self.x is None:
                 continue
             t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
-            if t < 0 or t > 1:
+            if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                 continue
             if data_x is None or data_y is None:
                 continue
@@ -225,7 +258,8 @@ class Animation:
             new_data_y = []
             for i in range(len(data_x)):
                 new_data_x.append(data_x[i] + (anim['new_x'][i] - data_x[i])*t)
-                new_data_y.append(data_y[i] + (anim['new_y'][i] - data_y[i])*t)
+                if len(data_y) == len(anim['new_y']):
+                    new_data_y.append(data_y[i] + (anim['new_y'][i] - data_y[i])*t)
             data_x = new_data_x
             data_y = new_data_y
 
@@ -241,6 +275,12 @@ class Animation:
         if self.__class__.__name__ == 'errorbar':
             kwargs['xerr'] = data_x_err
             kwargs['yerr'] = data_y_err
+        elif self.__class__.__name__ == 'fill_between':
+            kwargs['y1'] = y1
+            kwargs['y2'] = y2
+        elif self.__class__.__name__ == 'fill_betweenx':
+            kwargs['x1'] = x1
+            kwargs['x2'] = x2
         
         if self.function is not None:
             self.function(data_x,data_y,x,kwargs)
@@ -346,38 +386,17 @@ class Animation:
         self.compute_timings()
         return self
     
-    def grow(self,duration,delay=0,easing=None,persistent=True):
-        self.anims.append({
-            'name':'grow',
-            'duration':duration,
-            'delay':delay,
-            'easing':easing,
-            'persistent':persistent
-        })
-        return self
-    
-    def shrink(self,duration,delay=0,easing=None,persistent=True):
-        self.anims.append({
-            'name':'shrink',
-            'duration':duration,
-            'delay':delay,
-            'easing':easing,
-            'persistent':persistent
-        })
-        self.compute_timings()
-        return self
-    
-    def scale(self,scale_start,scale_end,duration,delay=0,easing=None,persistent=True):
-        if isinstance(scale_start,(list,tuple,np.ndarray)):
-            scalex_start,scaley_start = scale_start
+    def scale(self,start_scale,end_scale,duration,delay=0,easing=None,persistent=True):
+        if isinstance(start_scale,(list,tuple,np.ndarray)):
+            scalex_start,scaley_start = start_scale
         else:
-            scalex_start = scale_start
-            scaley_start = scale_start
-        if isinstance(scale_end,(list,tuple,np.ndarray)):
-            scalex_end,scaley_end = scale_end
+            scalex_start = start_scale
+            scaley_start = start_scale
+        if isinstance(end_scale,(list,tuple,np.ndarray)):
+            scalex_end,scaley_end = end_scale
         else:
-            scalex_end = scale_end
-            scaley_end = scale_end
+            scalex_end = end_scale
+            scaley_end = end_scale
         
         self.anims.append({
             'name':'scale',
@@ -417,14 +436,14 @@ class Animation:
             else:
                 o.set_transform(self.T + self.axis.transData)
 
-    def rotate(self,angle_start,angle_end,duration,delay=0,easing=None,persistent=True):
+    def rotate(self,start_angle,end_angle,duration,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'rotate',
             'duration':duration,
             'delay':delay,
             'easing':easing,
-            'start':angle_start,
-            'end':angle_end,
+            'start':start_angle,
+            'end':end_angle,
             'persistent':persistent
         })
         self.compute_timings()
@@ -481,34 +500,14 @@ class Animation:
                 o.set_offsets(offsets + np.array([pos_x,pos_y]))
             else:
                 o.set_transform(self.T + self.axis.transData)
-
-    def update(self,duration,delay=0,easing=None,persistent=True):
-        self.anims.append({
-            'name':'update',
-            'duration':duration,
-            'delay':delay,
-            'easing':easing,
-            'persistent':persistent
-        })
-        self.compute_timings()
-        return self
-    
-    def deupdate(self,duration,delay=0,easing=None,persistent=True):
-        self.anims.append({
-            'name':'deupdate',
-            'duration':duration,
-            'delay':delay,
-            'easing':easing,
-            'persistent':persistent
-        })
-        self.compute_timings()
-        return self
     
     def morph(self,new_x,new_y,duration,delay=0,easing=None,persistent=True):
         # TODO : if new_x/new_y not the same size, resample them to match
         if isinstance(new_x,numbers.Number):
             new_x = [new_x]
             new_y = [new_y]
+        new_x = np.ravel(new_x)
+        new_y = np.ravel(new_y)
         
         self.anims.append({
             'name':'morph',
@@ -619,10 +618,18 @@ class Animation:
             bbox = self.path.get_extents()
             cx = (bbox.x0 + bbox.x1) / 2
             cy = (bbox.y0 + bbox.y1) / 2
+        elif self.mpl_obj_type == mpl.contour.QuadContourSet:
+            bboxes = [p.get_extents() for p in self.obj.get_paths()]
+            bbox = mpl.transforms.Bbox.union(bboxes)
+            cx = (bbox.x0 + bbox.x1) / 2
+            cy = (bbox.y0 + bbox.y1) / 2
         elif self.mpl_obj_type == mpl.collections.Collection:
             offsets = self.obj.get_offsets()
-            cx = np.mean(offsets[:, 0])
-            cy = np.mean(offsets[:, 1])
+            if len(offsets) == 0:
+                cx,cy = 0,0
+            else:
+                cx = np.mean(offsets[:, 0])
+                cy = np.mean(offsets[:, 1])
         elif self.mpl_obj_type == mpl.patches.Rectangle:
             rects = self.obj.patches
             if isinstance(rects, list) and len(rects) > 0:
@@ -860,6 +867,7 @@ class axis_alpha(Animation):
         _x = min(x,anim['duration'] + anim['delay']-1)
         t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
         alpha = anim['start'] + (anim['end'] - anim['start'])*t
+        alpha = np.clip(alpha,0,1)
         
         self.axis.patch.set_alpha(alpha)
 
@@ -925,8 +933,8 @@ class fig_width_ratio(Animation):
         start_widths = np.ravel(start_widths).astype(float)
         end_widths = np.ravel(end_widths).astype(float)
         #Normalize the ratios so scaling with time remains linear
-        start_widths /= np.sum(start_widths)
-        end_widths /= np.sum(end_widths)
+        start_widths = start_widths/np.sum(start_widths)
+        end_widths = end_widths/np.sum(end_widths)
         self.anims = [{
             'name':'axis_move',
             'duration':duration,
@@ -986,8 +994,8 @@ class fig_height_ratio(Animation):
         start_heights = np.ravel(start_heights)
         end_heights = np.ravel(end_heights)
         #Normalize the ratios so scaling with time remains linear
-        start_heights /= np.sum(start_heights)
-        end_heights /= np.sum(end_heights)
+        start_heights = start_heights/np.sum(start_heights)
+        end_heights = end_heights/np.sum(end_heights)
         self.anims = [{
             'name':'axis_move',
             'duration':duration,
@@ -1789,6 +1797,7 @@ class fill_between(Animation):
         self.mpl_plot_type = plt.fill_between
         super().__init__(*args, **kwargs)
         self.x = np.ravel(x)
+        self.y = np.ravel(x)
         self.y1 = np.ravel(y1)
         self.y2 = np.ravel(y2)
         if self.y1.size != self.x.size:
@@ -1804,22 +1813,7 @@ class fill_between(Animation):
         super().clean(x,clear_anims)
     
     def function(self,data_x,data_y,x,kwargs):
-        y1 = self.y1
-        y2 = self.y2
-
-        for anim in self.anims:
-            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
-            if t < 0 or t > 1:
-                continue
-            i_max = len(self.x)
-            if anim['name'] == 'draw':
-                i_max = min(round(t*len(self.x)) + 1,len(self.x))
-            if anim['name'] == 'erase':
-                i_max = max(round((1-t)*len(self.x)),0)
-            y1 = y1[:i_max]
-            y2 = y2[:i_max]
-        
-        self.obj = self.axis.fill_between(x=data_x,y1=y1,y2=y2,**kwargs)
+        self.obj = self.axis.fill_between(x=data_x,**kwargs)
 
 class fill_betweenx(Animation):
     """
@@ -1970,6 +1964,7 @@ class fill_betweenx(Animation):
         self.mpl_obj_type = mpl.collections.Collection
         self.mpl_plot_type = plt.fill_betweenx
         super().__init__(*args, **kwargs)
+        self.x = np.ravel(y)
         self.y = np.array(y)
         self.x1 = np.array(x1).reshape(-1)
         self.x2 = np.array(x2).reshape(-1)
@@ -1986,22 +1981,7 @@ class fill_betweenx(Animation):
         super().clean(x,clear_anims)
     
     def function(self,data_x,data_y,x,kwargs):
-        x1 = self.x1
-        x2 = self.x2
-
-        for anim in self.anims:
-            t = anim['easing'].ease((x-anim['delay'])/(anim['duration']-1))
-            if t < 0 or t > 1:
-                continue
-            i_max = len(self.y)
-            if anim['name'] == 'draw':
-                i_max = min(round(t*len(self.y)) + 1,len(self.y))
-            if anim['name'] == 'erase':
-                i_max = max(round((1-t)*len(self.y)),0)
-            x1 = x1[:i_max]
-            x2 = x2[:i_max]
-        
-        self.obj = self.axis.fill_betweenx(x=data_x,x1=x1,x2=x2,**kwargs)
+        self.obj = self.axis.fill_betweenx(y=data_x,**kwargs)
     
 class axvline(Animation):
     """
@@ -2138,7 +2118,8 @@ class axvline(Animation):
             kwargs['ymax'] = kwargs['ymax'][0]
         if 'ymin' in kwargs:
             kwargs['ymin'] = kwargs['ymin'][0]
-        self.obj = self.axis.axvline(data_x,**kwargs)
+        if len(data_x) > 0:
+            self.obj = [self.axis.axvline(data_x,**kwargs)]
 
 class axhline(Animation):
     """
@@ -2208,14 +2189,15 @@ class axhline(Animation):
         self.mpl_obj_type = mpl.lines.Line2D
         self.mpl_plot_type = plt.axvline
         super().__init__(*args, **kwargs)
-        self.y = y
+        self.x = y
     
     def function(self,data_x,data_y,x,kwargs):
         if 'xmax' in kwargs:
             kwargs['xmax'] = kwargs['xmax'][0]
         if 'xmin' in kwargs:
             kwargs['xmin'] = kwargs['xmin'][0]
-        self.obj = self.axis.axhline(data_x,**kwargs)
+        if len(data_x) > 0:
+            self.obj = [self.axis.axhline(data_x,**kwargs)]
 
 class errorbar(Animation):
     """
@@ -2682,7 +2664,7 @@ class hist(Animation):
                 self.kwargs['color'] = self.base_color
         super().clean(x,clear_anims)
     
-    def morph(self,new_x,duration,delay=0,easing=None,persistent=True):
+    def morph(self,new_x,duration,delay=0,easing=None,persistent=True,**kwargs):
         if isinstance(new_x,numbers.Number):
             new_x = [new_x]
         
@@ -2841,18 +2823,11 @@ class hist2d(Animation):
       `.colors.PowerNorm`.
     """
     def __init__(self,x,y, *args, **kwargs):
-        self.mpl_obj_type = mpl.patches.Rectangle
+        self.mpl_obj_type = mpl.collections.Collection
         self.mpl_plot_type = plt.hist2d
         super().__init__(*args, **kwargs)
         self.x = np.ravel(x)
         self.y = np.ravel(y)
-
-    def clean(self,x,clear_anims=True):
-        if self.obj is not None and self.base_color is None:
-            self.base_color = self.obj[0].get_facecolor()
-            if 'color' not in self.kwargs:
-                self.kwargs['color'] = self.base_color
-        super().clean(x,clear_anims)
     
     def function(self,data_x,data_y,x,kwargs):
         if isinstance(kwargs['alpha'],np.ndarray):
@@ -3165,28 +3140,21 @@ class contourf(Animation):
        `ContourPy documentation <https://contourpy.readthedocs.io>`_.
     """
     def __init__(self, z, *args, **kwargs):
-        self.mpl_obj_type = mpl.patches.Rectangle
+        self.mpl_obj_type = mpl.contour.QuadContourSet
         self.mpl_plot_type = plt.contourf
         super().__init__(**kwargs)
-        self.x = z
-        self.y = np.zeros_like(z)
+        self.x = np.ravel(z)
+        self.y = np.ravel(z)
         self.init_shape = z.shape
 
-    def clean(self,x,clear_anims=True):
-        if self.obj is not None and self.base_color is None:
-            self.base_color = self.obj[0].get_facecolor()
-            if 'color' not in self.kwargs:
-                self.kwargs['color'] = self.base_color
-        super().clean(x,clear_anims)
-
-    def morph(self,new_z,duration,delay=0,easing=None,persistent=True):
+    def morph(self,new_z,duration,delay=0,easing=None,persistent=True,**kwargs):
         self.anims.append({
             'name':'morph',
             'duration':duration,
             'delay':delay,
             'easing':easing,
             'new_x':np.ravel(new_z),
-            'new_y':np.ravel(np.zeros_like(self.x)),
+            'new_y':np.ravel(new_z),
             'persistent':persistent
         })
         self.compute_timings()
@@ -3204,6 +3172,8 @@ class contourf(Animation):
         
         if 'color' in kwargs:
             kwargs.pop('color')
+
+        kwargs.pop('animated')
 
         if len(np.array(data_x).shape) == 1:
             new_data_x = np.zeros(self.init_shape)
@@ -3395,4 +3365,8 @@ class svg(Animation):
             kwargs['alpha'] = kwargs['alpha'][0]
         if self.fc is None:
             self.fc = self.axis._get_lines.get_next_color()
+        
+        if 'color' in kwargs:
+            kwargs.pop('color')
+
         self.draw_svg(kwargs)
