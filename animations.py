@@ -4,6 +4,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from svgpath2mpl import parse_path
 from matplotlib import transforms
+from matplotlib.textpath import TextPath
+from matplotlib.patches import PathPatch
+from matplotlib.font_manager import FontProperties
 
 from . import easings
 
@@ -289,7 +292,7 @@ class Animation:
         self.seq = sequence
         if self.axis is None:
             self.set_axis(self.seq.main_axis)
-        if self.easing == None:
+        if self.easing is None:
             if self.seq.easing is None:
                 self.easing = self.easing
             else:
@@ -425,7 +428,7 @@ class Animation:
 
         obj = np.ravel(self.obj)
         for o in obj:
-            if isinstance(o, mpl.collections.Collection):
+            if type(o) == mpl.collections.Collection:
                 offsets = np.asarray(o.get_offsets(), dtype=float).reshape(-1, 2)
                 offsets_centered = offsets - np.array([cx, cy])
 
@@ -461,7 +464,7 @@ class Animation:
         
         obj = np.ravel(self.obj)
         for o in obj:
-            if isinstance(o, mpl.collections.Collection):
+            if type(o) == mpl.collections.Collection:
                 offsets = np.asarray(o.get_offsets(), dtype=float).reshape(-1, 2)
                 offsets_centered = offsets - np.array([cx, cy])
                 
@@ -630,6 +633,15 @@ class Animation:
             else:
                 cx = np.mean(offsets[:, 0])
                 cy = np.mean(offsets[:, 1])
+        elif self.mpl_obj_type == mpl.collections.QuadMesh:
+            coords = self.obj.get_coordinates()
+            x0 = np.nanmin(coords[..., 0])
+            x1 = np.nanmax(coords[..., 0])
+            y0 = np.nanmin(coords[..., 1])
+            y1 = np.nanmax(coords[..., 1])
+
+            cx = 0.5 * (x0 + x1)
+            cy = 0.5 * (y0 + y1)
         elif self.mpl_obj_type == mpl.patches.Rectangle:
             rects = self.obj.patches
             if isinstance(rects, list) and len(rects) > 0:
@@ -647,6 +659,11 @@ class Animation:
                 bbox = self.obj.get_bbox()
                 cx = (bbox.x0 + bbox.x1) / 2
                 cy = (bbox.y0 + bbox.y1) / 2
+        elif self.mpl_obj_type == mpl.collections.FillBetweenPolyCollection:
+            bboxes = [p.get_extents() for p in self.obj.get_paths() if p.vertices.size]
+            bbox = mpl.transforms.Bbox.union(bboxes)
+            cx = 0.5 * (bbox.x0 + bbox.x1)
+            cy = 0.5 * (bbox.y0 + bbox.y1)
         return (cx,cy)
 
 class axis_zoom(Animation):
@@ -801,7 +818,7 @@ class axis_move(Animation):
         self.compute_timings()
 
     def init(self):
-        if self.anims[0]['start'] == None:
+        if self.anims[0]['start'] is None:
             self.anims[0]['start'] = [
                 (self.axis.get_xlim()[0]+self.axis.get_xlim()[1])/2,
                 (self.axis.get_ylim()[0]+self.axis.get_ylim()[1])/2,
@@ -950,7 +967,7 @@ class fig_width_ratio(Animation):
         if self.seq.fig.get_layout_engine() is None:
             #Band-aid fix
             self.seq.fig.set_layout_engine('tight')
-        if self.grid == None:
+        if self.grid is None:
             self.grid = self.axis.get_gridspec()
 
     def function(self,data_x,data_y,x,kwargs):
@@ -1011,7 +1028,7 @@ class fig_height_ratio(Animation):
         if self.seq.fig.get_layout_engine() is None:
             #Band-aid fix
             self.seq.fig.set_layout_engine('tight')
-        if self.grid == None:
+        if self.grid is None:
             self.grid = self.axis.get_gridspec()
 
     def function(self,data_x,data_y,x,kwargs):
@@ -1793,7 +1810,7 @@ class fill_between(Animation):
         This is the :ref:`pyplot wrapper <pyplot_interface>` for `.axes.Axes.fill_between`.
     """
     def __init__(self,x,y1,y2, *args, **kwargs):
-        self.mpl_obj_type = mpl.collections.Collection
+        self.mpl_obj_type = mpl.collections.FillBetweenPolyCollection
         self.mpl_plot_type = plt.fill_between
         super().__init__(*args, **kwargs)
         self.x = np.ravel(x)
@@ -1961,7 +1978,7 @@ class fill_betweenx(Animation):
         This is the :ref:`pyplot wrapper <pyplot_interface>` for `.axes.Axes.fill_betweenx`.
     """    
     def __init__(self,y,x1,x2, *args, **kwargs):
-        self.mpl_obj_type = mpl.collections.Collection
+        self.mpl_obj_type = mpl.collections.FillBetweenPolyCollection
         self.mpl_plot_type = plt.fill_betweenx
         super().__init__(*args, **kwargs)
         self.x = np.ravel(y)
@@ -2823,7 +2840,7 @@ class hist2d(Animation):
       `.colors.PowerNorm`.
     """
     def __init__(self,x,y, *args, **kwargs):
-        self.mpl_obj_type = mpl.collections.Collection
+        self.mpl_obj_type = mpl.collections.QuadMesh
         self.mpl_plot_type = plt.hist2d
         super().__init__(*args, **kwargs)
         self.x = np.ravel(x)
@@ -3317,6 +3334,8 @@ class text(Animation):
         >>> text(x, y, s, bbox=dict(facecolor='red', alpha=0.5))
     """
     def __init__(self,x,y,string, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.PathPatch
+        self.mpl_plot_type = plt.text
         super().__init__(*args, **kwargs)
         self.x = x
         self.y = y
@@ -3329,9 +3348,9 @@ class text(Animation):
                 continue
             t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
             if anim['name'] == 'sequence':
-                if t < 0 or t > 1:
+                if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                     continue
-                _i = min(round(t*len(s)),len(s)-1)
+                _i = max(min(round(t*len(s)),len(s)-1),0)
                 s = s[_i]
             elif anim['name'] == 'draw':
                 i_max = min(round(t*len(s)),len(s))
@@ -3343,7 +3362,29 @@ class text(Animation):
         self.function(self.x,self.y,s,kwargs)
 
     def function(self,data_x,data_y,s,kwargs):
-        self.obj = self.axis.text(x=data_x,y=data_y,s=s,**kwargs)
+        if len(s) == 0:
+            return
+        if 'fontsize' in kwargs:
+            fp = FontProperties(size=kwargs['fontsize'])
+        else:
+            fp = FontProperties()
+        tp = TextPath((data_x, data_y), s, prop=fp)
+        patch = PathPatch(tp, **kwargs)
+        self.axis.add_patch(patch)
+
+        px_per_pt = self.axis.get_figure().dpi / 72.0
+        dx_per_px = (self.axis.get_xlim()[1] - self.axis.get_xlim()[0]) / self.axis.bbox.width
+        dy_per_px = (self.axis.get_ylim()[1] - self.axis.get_ylim()[0]) / self.axis.bbox.height
+        sx = px_per_pt * dx_per_px
+        sy = px_per_pt * dy_per_px
+
+        T = (
+            transforms.Affine2D()
+            .scale(sx, sy)
+        )
+        patch.set_path(patch.get_path().transformed(T))
+        self.path = patch.get_path()
+        self.obj = patch
 
 class svg(Animation):
     def __init__(self, data, fc=None, ec='k', lw=2, *args, **kwargs):
@@ -3356,9 +3397,47 @@ class svg(Animation):
         self.path = None
 
     def draw_svg(self,kwargs):
-        self.path = parse_path(self.data)
         self.obj = mpl.patches.PathPatch(self.path,facecolor=self.fc,edgecolor=self.ec,lw=self.lw,**kwargs)
         self.axis.add_patch(self.obj)
+
+    def _slice_path(self, path, i0, i1):
+        verts = path.vertices[i0:i1]
+        if len(verts) == 0:
+            return None
+        codes = np.full(len(verts), mpl.path.Path.LINETO, dtype=np.uint8)
+        codes[0] = mpl.path.Path.MOVETO
+        return mpl.path.Path(verts, codes)
+
+    def anim_function(self,x,kwargs):
+        self.path = parse_path(self.data)
+        path = self.path
+        n = len(path.vertices)
+
+        i0, i1 = 0, n
+        has_path_anim = False
+
+        for anim in self.anims:
+            if anim['name'] not in ['draw','erase','sequence']:
+                continue
+            if x < anim['delay'] or x > anim['delay'] + anim['duration']:
+                continue
+            
+            has_path_anim = True
+            t = anim['easing'].ease((x - anim['delay']) / max(1, anim['duration'] - 1))
+
+            if anim['name'] == 'draw':
+                i0, i1 = 0, min(round(t * n), n)
+            elif anim['name'] == 'erase':
+                i0, i1 = 0, max(round((1 - t) * n), 0)
+            elif anim['name'] == 'sequence':
+                i = max(min(round(t * (n - 1)), n - 1), 0)
+                i0, i1 = max(i - 1, 0), min(i + 1, n)
+        
+        frame_path = self._slice_path(path, i0, i1) if has_path_anim else path
+        if frame_path is None:
+            return
+        self.path = frame_path
+        self.function(self.x, self.y, None, kwargs)
 
     def function(self,data_x,data_y,x,kwargs):
         if isinstance(kwargs['alpha'],np.ndarray):
