@@ -246,8 +246,6 @@ class GUI:
                 if owner_index is not None:
                     self._clip_id_to_owner[clip_id] = owner_index
 
-        # Keep rows compact and avoid accidental overlaps by greedy reassignment
-        # only when row has not been explicitly set yet.
         row_end = []
         clips.sort(key=lambda c: (c["x"], c["width"]))
         for clip in clips:
@@ -290,7 +288,6 @@ class GUI:
         dirs = [Path(self.seq.name)]
         if hasattr(self.seq, "full_path"):
             dirs.insert(0, Path(self.seq.full_path) / self.seq.name)
-        # Preserve order while removing duplicates
         unique = []
         seen = set()
         for d in dirs:
@@ -390,6 +387,8 @@ class GUI:
                 )
             else:
                 target.translate((0, 0), (1, 1), duration=duration, delay=delay)
+        elif name == "sequence":
+            target.sequence(duration=duration, delay=delay)
         else:
             target.translate((0, 0), (1, 1), duration=duration, delay=delay)
 

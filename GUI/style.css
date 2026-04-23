@@ -329,7 +329,7 @@ button:hover{
 	position: absolute;
 	top: 0;
 	bottom: 0;
-	left: calc(var(--timeline-width, 1000px) + 10px);
+	left: calc(var(--timeline-width, 1000px) + 0px);
 	right: 0;
 	background: rgba(0, 0, 0, 0.35);
 	pointer-events: none;
@@ -380,6 +380,17 @@ button:hover{
     border-left:   1.5px solid hsl(191, 39%, 30%);
     background-image: url('src/btn/btn_bg_default.png');
 }
+
+/*
+Translate : #4b91e2
+Rotate : #d9125b
+Scale : # f5a524
+Tween : #1cc4b6
+Morph : #a24ea0
+Draw : #459140
+Sequence : #FF4949
+Other : #1f4047
+*/
 
 .clip.Translate,.palette-item[data-type="Translate"]{
 		background-color: hsl(212, 72%, 59%);
@@ -433,6 +444,15 @@ button:hover{
 		border-top:    1.5px solid hsl(116, 39%, 51%);
 		border-left:   1.5px solid hsl(116, 39%, 51%);
 		background-image: url('src/btn/btn_bg_Draw.png');
+}
+
+.clip.Sequence,.palette-item[data-type="Sequence"]{
+		background-color: hsl(0, 100%, 64%);
+		border-bottom: 1.5px solid hsl(0, 71%, 53%);
+		border-right:  1.5px solid hsl(0, 71%, 53%);
+		border-top:    1.5px solid hsl(0, 100%, 69%);
+		border-left:   1.5px solid hsl(0, 100%, 69%);
+		background-image: url('src/btn/btn_bg_Sequence.png');
 }
 
 .clip.resize-left,
