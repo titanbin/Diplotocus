@@ -27,6 +27,40 @@ def _safe_float(value, default=0.0):
     except Exception:
         return float(default)
 
+def _normalize_scalar(value):
+    if isinstance(value, np.ndarray):
+        if value.size == 0:
+            return None
+        return _normalize_scalar(value.ravel()[0])
+    if isinstance(value, (list, tuple)):
+        if len(value) == 0:
+            return None
+        return _normalize_scalar(value[0])
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+def _parse_scalar_like(value, default=None):
+    if value is None:
+        return default
+
+    normalized = _normalize_scalar(value)
+    if isinstance(normalized, str):
+        text = normalized.strip()
+        if text == "":
+            return default
+
+        if text.startswith("array(") and text.endswith(")"):
+            text = text[6:-1].strip()
+
+        try:
+            parsed = ast.literal_eval(text)
+        except Exception:
+            return text
+        return _normalize_scalar(parsed)
+
+    return normalized
+
 def _safe_name(name):
     text = str(name).strip().lower()
     text = re.sub(r"\s+", "_", text)
@@ -372,12 +406,10 @@ class GUI:
         elif name == "scale":
             target.scale((1, 1), (2, 2), duration=duration, delay=delay)
         elif name == "tween":
-            # Empty tween lists do not create an animation; create a neutral default.
-            target.tween(property="alpha", start=1, end=1, duration=duration, delay=delay)
+            target.tween(property="alpha", start=0, end=1, duration=duration, delay=delay)
         elif name == "draw":
             target.draw(duration=duration, delay=delay)
         elif name == "morph":
-            # Morph requires target geometry; fallback to translate if unavailable.
             if isinstance(self.plot_objects[obj_index], dict) and "new_x" in self.plot_objects[obj_index] and "new_y" in self.plot_objects[obj_index]:
                 target.morph(
                     new_x=self.plot_objects[obj_index]["new_x"],
@@ -512,10 +544,13 @@ class GUI:
                 "end": float(anim.get("end", 1.0)),
             })
         elif name == "tween":
+            tween_property = _normalize_scalar(anim.get("property", "alpha"))
+            tween_start = _normalize_scalar(anim.get("start", 0))
+            tween_end = _normalize_scalar(anim.get("end", 1))
             props.update({
-                "tween_properties": str([anim.get("property", "alpha")]),
-                "tween_starts": str([anim.get("start", 1)]),
-                "tween_ends": str([anim.get("end", 1)]),
+                "tween_property": "alpha" if tween_property is None else str(tween_property),
+                "tween_start": "0" if tween_start is None else str(tween_start),
+                "tween_end": "1" if tween_end is None else str(tween_end),
             })
         elif name == "draw":
             props.update({
@@ -650,21 +685,16 @@ class GUI:
                 if isinstance(entry, dict):
                     owner_obj = entry.get("object")
 
-            props = self._parse_list_like(payload.get("tween_properties"), [anim.get("property", "alpha")])
-            starts = self._parse_list_like(payload.get("tween_starts"), [anim.get("start", 1)])
-            ends = self._parse_list_like(payload.get("tween_ends"), [anim.get("end", 1)])
+            prop = _parse_scalar_like(payload.get("tween_property"), anim.get("property", "alpha"))
+            start = _parse_scalar_like(payload.get("tween_start"), anim.get("start", 0))
+            end = _parse_scalar_like(payload.get("tween_end"), anim.get("end", 1))
 
-            if len(props) == 0:
-                props = ["alpha"]
-            if len(starts) == 0:
-                starts = [1]
-            if len(ends) == 0:
-                ends = [1]
+            if prop is None or str(prop).strip() == "":
+                prop = "alpha"
 
-            n = min(len(props), len(starts), len(ends))
-            props = props[:n]
-            starts = starts[:n]
-            ends = ends[:n]
+            props = [str(prop)]
+            starts = [start]
+            ends = [end]
 
             if owner_obj is not None:
                 props = list(owner_obj.get_main_alias(props))
