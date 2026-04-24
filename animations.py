@@ -26,10 +26,6 @@ def dealias(mpl_obj,kwargs):
 
     return kwargs
 
-#----------------------------------------------
-# ANIMATION CLASSES
-#----------------------------------------------
-
 class Animation:
     """
     A parent Animation object for all plotting objects.
@@ -53,6 +49,8 @@ class Animation:
         self.obj = None
         self.base_color = None
         self.tween_properties = []
+        self.x_min = 0
+        self.x_max = 0
         self.tween_starts = []
         self.tween_ends = []
         self.transforms = []
@@ -187,7 +185,7 @@ class Animation:
         #Second pass to cut points if drawing or erasing
         i_max = -1
         for anim in self.anims:
-            if anim['name'] not in ['draw','erase']:
+            if anim['name'] != 'draw':
                 continue
             if self.x is None:
                 continue
@@ -200,10 +198,10 @@ class Animation:
                 if np.sum(alpha) == 0:
                     kwargs['alpha'] = 1
 
-            if anim['name'] == 'draw':
-                i_max = min(round(t*len(data_x)),len(data_x))
-            elif anim['name'] == 'erase':
+            if anim['reverse']:
                 i_max = max(round((1-t)*len(data_x)),0)
+            else:
+                i_max = min(round(t*len(data_x)),len(data_x))
             break
         
         if i_max > 0:
@@ -365,24 +363,13 @@ class Animation:
     def hide(self,duration,delay=0,easing=None,persistent=True):
         return self.tween('alpha',start=1,end=0,duration=duration,delay=delay,easing=easing,persistent=persistent)
     
-    def draw(self,duration,delay=0,easing=None,persistent=True):
+    def draw(self,duration,reverse=False,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'draw',
             'duration':duration,
             'delay':delay,
             'easing':easing,
-            'persistent':persistent,
-            'played':False
-        })
-        self.compute_timings()
-        return self
-    
-    def erase(self,duration,delay=0,easing=None,persistent=True):
-        self.anims.append({
-            'name':'erase',
-            'duration':duration,
-            'delay':delay,
-            'easing':easing,
+            'reverse':reverse,
             'persistent':persistent,
             'played':False
         })
@@ -546,7 +533,7 @@ class Animation:
                 self.base_color = self.obj[0].get_color()    
             elif hasattr(self.obj,'get_color'):
                 self.base_color = self.obj.get_color()
-            if 'color' not in self.kwargs and self.base_color is not None:
+            if 'color' not in self.kwargs and 'c' not in self.kwargs and self.base_color is not None:
                 self.kwargs['color'] = self.base_color
 
         for anim in self.anims:
@@ -1261,7 +1248,6 @@ class scatter(Animation):
     def __init__(self,x,y,easing=None,axis=None,*args,**kwargs):
         self.mpl_obj_type = mpl.collections.Collection
         self.mpl_plot_type = plt.plot
-
         super().__init__(easing=easing,axis=axis,*args, **kwargs)
 
         self.x = np.ravel(x)
@@ -1277,6 +1263,12 @@ class scatter(Animation):
         super().clean(x,clear_anims)
     
     def function(self,data_x,data_y,x,kwargs):
+        if 'c' in kwargs and 'color' in kwargs:
+            kwargs.pop('color')
+        if 'c' in kwargs:
+            c = np.ravel(kwargs['c'])
+            if c.ndim == 1 and (len(c) == 3 or len(c) == 4) and len(c) != len(data_x) and (c <= 1).all():
+                kwargs['c'] = c.reshape(1,-1)
         self.obj = self.axis.scatter(data_x,data_y,**kwargs)
 
 class plot(Animation):
@@ -3359,7 +3351,7 @@ class text(Animation):
     def anim_function(self,x,kwargs):
         s = self.string
         for anim in self.anims:
-            if anim['name'] not in ['draw','erase','sequence']:
+            if anim['name'] not in ['draw','sequence']:
                 continue
             t = self.get_t_from_x(anim,x)
             if anim['name'] == 'sequence':
@@ -3368,10 +3360,10 @@ class text(Animation):
                 _i = max(min(round(t*len(s)),len(s)-1),0)
                 s = s[_i]
             elif anim['name'] == 'draw':
-                i_max = min(round(t*len(s)),len(s))
-                s = s[:i_max]
-            elif anim['name'] == 'erase':
-                i_max = max(round((1-t)*len(s)),0)
+                if anim['reverse']:
+                    i_max = max(round((1-t)*len(s)),0)
+                else:
+                    i_max = min(round(t*len(s)),len(s))
                 s = s[:i_max]
         
         self.function(self.x,self.y,s,kwargs)
@@ -3432,7 +3424,7 @@ class svg(Animation):
         has_path_anim = False
 
         for anim in self.anims:
-            if anim['name'] not in ['draw','erase','sequence']:
+            if anim['name'] not in ['draw','sequence']:
                 continue
             if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                 continue
@@ -3441,9 +3433,10 @@ class svg(Animation):
             t = self.get_t_from_x(anim,x)
 
             if anim['name'] == 'draw':
-                i0, i1 = 0, min(round(t * n), n)
-            elif anim['name'] == 'erase':
-                i0, i1 = 0, max(round((1 - t) * n), 0)
+                if anim['reverse']:
+                    i0, i1 = 0, max(round((1 - t) * n), 0)
+                else:
+                    i0, i1 = 0, min(round(t * n), n)
             elif anim['name'] == 'sequence':
                 i = max(min(round(t * (n - 1)), n - 1), 0)
                 i0, i1 = max(i - 1, 0), min(i + 1, n)

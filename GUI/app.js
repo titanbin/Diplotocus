@@ -54,6 +54,7 @@
     ylim_top: { wrap: "#dlgYlimTopWrap", input: "#dlgYlimTop", defaultValue: "", read: () => Number($("#dlgYlimTop").val() || 0) },
     ratio_start: { wrap: "#dlgRatioStartWrap", input: "#dlgRatioStart", defaultValue: "[1, 1]", read: () => $("#dlgRatioStart").val() },
     ratio_end: { wrap: "#dlgRatioEndWrap", input: "#dlgRatioEnd", defaultValue: "[1, 1]", read: () => $("#dlgRatioEnd").val() },
+    reverse: { wrap: "#dlgReverseWrap", input: "#dlgReverse", defaultValue: false, read: () => $("#dlgReverse").is(":checked") }
   };
 
   const DIALOG_TYPE_SCHEMAS = {
@@ -61,7 +62,7 @@
     scale: { fields: ["start_x", "start_y", "end_x", "end_y"], showObject: true },
     rotate: { fields: ["start", "end"], showObject: true },
     tween: { fields: ["tween_properties", "tween_starts", "tween_ends"], showObject: true },
-    draw: { fields: [], showObject: true },
+    draw: { fields: ['reverse'], showObject: true },
     morph: { fields: [], showObject: true },
     axis_zoom: { fields: ["zoom"], showObject: false },
     axis_limits: { fields: ["xlim_left", "xlim_right", "ylim_bottom", "ylim_top"], showObject: false },

@@ -1,6 +1,6 @@
 to update the python package :
 
-run from DIPLOTOCUS
+run from root 'Diplotocus' folder
 rm -rf build/ dist/ *.egg-info
 #next step is very important, generates automatic docstring from matplotlib.
 #core.py imports the generated py file, so if not ran, any newly added class will not appear in the package
@@ -21,10 +21,3 @@ if you did, delete repo, start a new one from github desktop, name it html and s
 all the files directly from it, and create a .nojekyll file so the _ in the url are not broken
 jupyter-book build --all .
 push to the NEST-docs repo
-
-to add a function to the doc:
-
-copy a similar one, like plot.ipynb
-change the headers
-change the matplotlib API link
-add the file to the _toc.yml

@@ -517,6 +517,10 @@ class GUI:
                 "tween_starts": str([anim.get("start", 1)]),
                 "tween_ends": str([anim.get("end", 1)]),
             })
+        elif name == "draw":
+            props.update({
+                "reverse": str([anim.get("reverse",False)])
+            })
         elif name in {"fig_width_ratio", "fig_height_ratio"}:
             props.update({
                 "ratio_start": str(list(np.ravel(anim.get("start", [1.0])))),
@@ -669,6 +673,12 @@ class GUI:
             anim["property"] = props[0]
             anim["start"] = starts[0]
             anim["end"] = ends[0]
+        elif name == "draw":
+            reverse_val = payload.get('reverse', False)
+            if isinstance(reverse_val, str):
+                anim['reverse'] = reverse_val.lower() in ['true', '1', 'yes']
+            else:
+                anim['reverse'] = bool(reverse_val)
 
         self._invalidate_render_cache(from_frame=min(old_delay, anim["delay"]))
 
