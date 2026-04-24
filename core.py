@@ -168,17 +168,23 @@ class Sequence:
         
         x_max = 0
         for animation in animations:
+            for anim in animation.anims:
+                if anim['played'] == False:
+                    anim['delay'] += self.x
             animation.initialize(self)
 
             if animation.x_max > x_max:
                 x_max = animation.x_max
         
-        loop = range(x_max)
+        loop = range(self.x,x_max)
         if not self.quiet:
             loop = tqdm(loop)
 
         for x in loop:
             self.plot(animations=animations,x=x,easing=easing,debug=debug)
+        for animation in animations:
+            for anim in animation.anims:
+                anim['played'] = True
         self.x = x_max
 
     def wait(self,duration):

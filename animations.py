@@ -49,7 +49,6 @@ class Animation:
         self.anims = []
         self.seq = None
         self.set_easing(easing)
-        self.compute_timings()
         self.set_axis(axis)
         self.obj = None
         self.base_color = None
@@ -125,16 +124,6 @@ class Animation:
             self.set_axis(self.seq.main_axis)
         return self
 
-    def set_duration(self,duration):
-        self.duration = duration
-        self.compute_timings()
-        return self
-
-    def set_delay(self,delay):
-        self.delay = delay
-        self.compute_timings()
-        return self
-
     def set_easing(self,easing):
         self.easing = easing
         return self
@@ -172,9 +161,10 @@ class Animation:
                 continue
             if self.x is None:
                 continue
-            t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
             if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                 continue
+
+            t = self.get_t_from_x(anim,x)
 
             if len(data_x.shape) == 1:
                 data_x = data_x.reshape((-1,1))
@@ -201,9 +191,10 @@ class Animation:
                 continue
             if self.x is None:
                 continue
-            t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
             if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                 continue
+            t = self.get_t_from_x(anim,x)
+
             if 'alpha' in kwargs:
                 alpha = np.ravel(kwargs['alpha'])
                 if np.sum(alpha) == 0:
@@ -251,9 +242,10 @@ class Animation:
                 continue
             if self.x is None:
                 continue
-            t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
             if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                 continue
+            t = self.get_t_from_x(anim,x)
+
             if data_x is None or data_y is None:
                 continue
             
@@ -313,6 +305,11 @@ class Animation:
         self.x_max = x_max
         self.x_min = x_min
 
+    def get_t_from_x(self,anim,x):
+        if anim['duration'] == 1 and x == anim['delay']:
+            return 1
+        return anim['easing'].ease((x - anim['delay']) / max(1, anim['duration'] - 1))
+
     def sanitize_colors(self,properties,starts,ends):
         for i in range(len(properties)):
             if properties[i] in ['c','colors','color','edgecolor','facecolor','edgecolors','facecolors']:
@@ -338,7 +335,8 @@ class Animation:
                 'property':property,
                 'start':start,
                 'end':end,
-                'persistent':persistent
+                'persistent':persistent,
+                'played':False
             }
             self.anims.append(new_anim)
         self.compute_timings()
@@ -353,7 +351,7 @@ class Animation:
             _x = min(x,anim['duration'] + anim['delay'])
             if anim['easing'] is None:
                 anim['easing'] = self.easing
-            t = anim['easing'].ease((_x-anim['delay'])/max(1,anim['duration']-1))
+            t = self.get_t_from_x(anim,x)
             t = np.clip(t,0,1)
             start = np.ravel(anim['start'])
             end = np.ravel(anim['end'])
@@ -373,7 +371,8 @@ class Animation:
             'duration':duration,
             'delay':delay,
             'easing':easing,
-            'persistent':persistent
+            'persistent':persistent,
+            'played':False
         })
         self.compute_timings()
         return self
@@ -384,7 +383,8 @@ class Animation:
             'duration':duration,
             'delay':delay,
             'easing':easing,
-            'persistent':persistent
+            'persistent':persistent,
+            'played':False
         })
         self.compute_timings()
         return self
@@ -408,7 +408,8 @@ class Animation:
             'easing':easing,
             'start':(scalex_start,scaley_start),
             'end':(scalex_end,scaley_end),
-            'persistent':persistent
+            'persistent':persistent,
+            'played':False
         })
         self.compute_timings()
         return self
@@ -447,7 +448,8 @@ class Animation:
             'easing':easing,
             'start':start_angle,
             'end':end_angle,
-            'persistent':persistent
+            'persistent':persistent,
+            'played':False
         })
         self.compute_timings()
         return self
@@ -487,7 +489,8 @@ class Animation:
             'easing':easing,
             'start':start_pos,
             'end':end_pos,
-            'persistent':persistent
+            'persistent':persistent,
+            'played':False
         })
         self.compute_timings()
         return self
@@ -519,7 +522,8 @@ class Animation:
             'easing':easing,
             'new_x':new_x,
             'new_y':new_y,
-            'persistent':persistent
+            'persistent':persistent,
+            'played':False
         })
         self.compute_timings()
         return self
@@ -530,7 +534,8 @@ class Animation:
             'duration':duration,
             'delay':delay,
             'easing':easing,
-            'persistent':persistent
+            'persistent':persistent,
+            'played':False
         })
         self.compute_timings()
         return self
@@ -552,7 +557,7 @@ class Animation:
                     anim['easing'] = self.seq.easing
 
         for anim in self.anims:
-            t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
+            t = self.get_t_from_x(anim,x)
             if t != 1:
                 continue
             if anim['name'] == 'morph':
@@ -572,7 +577,7 @@ class Animation:
                 except:
                     pass
             self.obj = None
-        elif x == self.x_max - 1 and clear_anims:
+        elif x == self.x_max and clear_anims:
             self.end_animation()
             
     def end_animation(self):
@@ -598,7 +603,8 @@ class Animation:
             _x = min(x,anim['duration'] + anim['delay']-1)
             if anim['easing'] is None:
                 anim['easing'] = self.easing
-            t = anim['easing'].ease((_x-anim['delay'])/max(1,anim['duration']-1))
+            
+            t = self.get_t_from_x(anim,_x)
             if anim['name'] == 'scale':
                 start = np.ravel(anim['start'])
                 end = np.ravel(anim['end'])
@@ -696,7 +702,8 @@ class axis_zoom(Animation):
             'delay':delay,
             'easing':easing,
             'persistent':True,
-            'zoom':zoom
+            'zoom':zoom,
+            'played':False
         }]
         self.compute_timings()
 
@@ -712,7 +719,7 @@ class axis_zoom(Animation):
         if x < anim['delay']:
             return
         _x = min(x,anim['duration'] + anim['delay']-1)
-        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+        t = self.get_t_from_x(anim,x)
     
         center = ((self.axis.get_xlim()[1]+self.axis.get_xlim()[0])/2,(self.axis.get_ylim()[1]+self.axis.get_ylim()[0])/2)
         width = anim['start_width'] + (anim['end_width'] - anim['start_width'])*t
@@ -757,7 +764,8 @@ class axis_limits(Animation):
             'easing':easing,
             'persistent':True,
             'xlim':xlim,
-            'ylim':ylim
+            'ylim':ylim,
+            'played':False
         }]
         self.compute_timings()
 
@@ -771,7 +779,7 @@ class axis_limits(Animation):
         if x < anim['delay']:
             return
         _x = min(x,anim['duration'] + anim['delay']-1)
-        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+        t = self.get_t_from_x(anim,x)
 
         if anim['xlim'] is not None:
             xlim_left   = anim['start_xlim'][0] + (anim['xlim'][0] - anim['start_xlim'][0])*t
@@ -813,7 +821,8 @@ class axis_move(Animation):
             'easing':easing,
             'persistent':True,
             'start':start_pos,
-            'end':end_pos
+            'end':end_pos,
+            'played':False
         }]
         self.compute_timings()
 
@@ -829,7 +838,7 @@ class axis_move(Animation):
         if x < anim['delay']:
             return
         _x = min(x,anim['duration'] + anim['delay']-1)
-        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+        t = self.get_t_from_x(anim,x)
         width  = self.axis.get_xlim()[1]-self.axis.get_xlim()[0]
         height = self.axis.get_ylim()[1]-self.axis.get_ylim()[0]
         pos_x = anim['start'][0] + (anim['end'][0] - anim['start'][0])*t
@@ -870,7 +879,8 @@ class axis_alpha(Animation):
             'easing':easing,
             'persistent':True,
             'start':start_alpha,
-            'end':end_alpha
+            'end':end_alpha,
+            'played':False
         }]
         self.compute_timings()
 
@@ -882,7 +892,7 @@ class axis_alpha(Animation):
         if x < anim['delay']:
             return
         _x = min(x,anim['duration'] + anim['delay']-1)
-        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+        t = self.get_t_from_x(anim,x)
         alpha = anim['start'] + (anim['end'] - anim['start'])*t
         alpha = np.clip(alpha,0,1)
         
@@ -959,7 +969,8 @@ class fig_width_ratio(Animation):
             'easing':easing,
             'persistent':True,
             'start':start_widths,
-            'end':end_widths
+            'end':end_widths,
+            'played':False
         }]
         self.compute_timings()
 
@@ -975,7 +986,7 @@ class fig_width_ratio(Animation):
         if x < anim['delay']:
             return
         _x = min(x,anim['duration'] + anim['delay']-1)
-        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+        t = self.get_t_from_x(anim,x)
         
         widths = anim['start'] + (anim['end'] - anim['start'])*t
         
@@ -1020,7 +1031,8 @@ class fig_height_ratio(Animation):
             'easing':easing,
             'persistent':True,
             'start':start_heights,
-            'end':end_heights
+            'end':end_heights,
+            'played':False
         }]
         self.compute_timings()
 
@@ -1036,7 +1048,7 @@ class fig_height_ratio(Animation):
         if x < anim['delay']:
             return
         _x = min(x,anim['duration'] + anim['delay']-1)
-        t = anim['easing'].ease((_x-anim['delay'])/(anim['duration']-1))
+        t = self.get_t_from_x(anim,x)
         
         heights = anim['start'] + (anim['end'] - anim['start'])*t
         
@@ -2445,7 +2457,8 @@ class errorbar(Animation):
             'new_y':new_y,
             'new_x_err':new_xerr,
             'new_y_err':new_yerr,
-            'persistent':persistent
+            'persistent':persistent,
+            'played':False
         })
         self.compute_timings()
         return self
@@ -2692,7 +2705,8 @@ class hist(Animation):
             'easing':easing,
             'new_x':new_x,
             'new_y':np.zeros_like(self.y),
-            'persistent':persistent
+            'persistent':persistent,
+            'played':False
         })
         self.compute_timings()
         return self
@@ -3172,7 +3186,8 @@ class contourf(Animation):
             'easing':easing,
             'new_x':np.ravel(new_z),
             'new_y':np.ravel(new_z),
-            'persistent':persistent
+            'persistent':persistent,
+            'played':False
         })
         self.compute_timings()
         return self
@@ -3346,7 +3361,7 @@ class text(Animation):
         for anim in self.anims:
             if anim['name'] not in ['draw','erase','sequence']:
                 continue
-            t = anim['easing'].ease((x-anim['delay'])/max(1,anim['duration']-1))
+            t = self.get_t_from_x(anim,x)
             if anim['name'] == 'sequence':
                 if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                     continue
@@ -3389,15 +3404,15 @@ class text(Animation):
 class svg(Animation):
     def __init__(self, data, fc=None, ec='k', lw=2, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.PathPatch
+        kwargs['facecolor'] = fc
+        kwargs['edgecolor'] = ec
+        kwargs['linewidth'] = lw
         super().__init__(*args, **kwargs)
         self.data = data
-        self.fc = fc
-        self.ec = ec
-        self.lw = lw
         self.path = None
 
     def draw_svg(self,kwargs):
-        self.obj = mpl.patches.PathPatch(self.path,facecolor=self.fc,edgecolor=self.ec,lw=self.lw,**kwargs)
+        self.obj = mpl.patches.PathPatch(self.path,**kwargs)
         self.axis.add_patch(self.obj)
 
     def _slice_path(self, path, i0, i1):
@@ -3423,7 +3438,7 @@ class svg(Animation):
                 continue
             
             has_path_anim = True
-            t = anim['easing'].ease((x - anim['delay']) / max(1, anim['duration'] - 1))
+            t = self.get_t_from_x(anim,x)
 
             if anim['name'] == 'draw':
                 i0, i1 = 0, min(round(t * n), n)
@@ -3442,8 +3457,8 @@ class svg(Animation):
     def function(self,data_x,data_y,x,kwargs):
         if isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
-        if self.fc is None:
-            self.fc = self.axis._get_lines.get_next_color()
+        if kwargs['facecolor'] is None:
+            kwargs['facecolor'] = self.axis._get_lines.get_next_color()
         
         if 'color' in kwargs:
             kwargs.pop('color')
