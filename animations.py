@@ -376,7 +376,7 @@ class Animation:
         self.compute_timings()
         return self
     
-    def scale(self,start_scale,end_scale,duration,delay=0,easing=None,persistent=True):
+    def scale(self,start_scale,end_scale,duration,center=None,delay=0,easing=None,persistent=True):
         if isinstance(start_scale,(list,tuple,np.ndarray)):
             scalex_start,scaley_start = start_scale
         else:
@@ -396,13 +396,17 @@ class Animation:
             'start':(scalex_start,scaley_start),
             'end':(scalex_end,scaley_end),
             'persistent':persistent,
+            'center':center,
             'played':False
         })
         self.compute_timings()
         return self
     
-    def _scale(self, t, start, end):
-        cx, cy = self.get_center()
+    def _scale(self, t, start, end, center=None):
+        if center is None:
+            cx, cy = self.get_center()
+        else:
+            cx, cy = center
         scale_x = start[0] + (end[0] - start[0]) * t
         scale_y = start[1] + (end[1] - start[1]) * t
 
@@ -427,7 +431,7 @@ class Animation:
             else:
                 o.set_transform(self.T + self.axis.transData)
 
-    def rotate(self,start_angle,end_angle,duration,delay=0,easing=None,persistent=True):
+    def rotate(self,start_angle,end_angle,duration,center=None,delay=0,easing=None,persistent=True):
         self.anims.append({
             'name':'rotate',
             'duration':duration,
@@ -435,14 +439,18 @@ class Animation:
             'easing':easing,
             'start':start_angle,
             'end':end_angle,
+            'center':center,
             'persistent':persistent,
             'played':False
         })
         self.compute_timings()
         return self
     
-    def _rotate(self, t, start, end):
-        cx, cy = self.get_center()
+    def _rotate(self, t, start, end, center=None):
+        if center is None:
+            cx, cy = self.get_center()
+        else:
+            cx, cy = center
         rotation = start + (end - start) * t
         self.T = (
             self.T
@@ -595,7 +603,7 @@ class Animation:
             if anim['name'] == 'scale':
                 start = np.ravel(anim['start'])
                 end = np.ravel(anim['end'])
-                self._scale(t,start,end)
+                self._scale(t,start,end,center=anim['center'])
             if anim['name'] == 'translate':
                 start = np.ravel(anim['start'])
                 end = np.ravel(anim['end'])
@@ -603,7 +611,7 @@ class Animation:
             if anim['name'] == 'rotate':
                 start = np.ravel(anim['start'])
                 end = np.ravel(anim['end'])
-                self._rotate(t,start,end)
+                self._rotate(t,start,end,center=anim['center'])
 
     def get_center(self):
         if self.mpl_obj_type == mpl.lines.Line2D:
@@ -948,6 +956,8 @@ class fig_width_ratio(Animation):
         self.grid = None
         start_widths = np.ravel(start_widths).astype(float)
         end_widths = np.ravel(end_widths).astype(float)
+        start_widths = np.maximum(start_widths,1e-3)
+        end_widths = np.maximum(end_widths,1e-3)
         #Normalize the ratios so scaling with time remains linear
         start_widths = start_widths/np.sum(start_widths)
         end_widths = end_widths/np.sum(end_widths)
@@ -981,6 +991,18 @@ class fig_width_ratio(Animation):
         
         self.grid.set_width_ratios(widths)
 
+        axes = np.ravel(self.seq.fig.get_axes())
+        shape = self.seq.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
+        axes = axes.reshape(shape)        
+        for i in range(len(widths)):
+            if widths[i] < 1e-3:
+                for row in axes:
+                    row[i].set_axis_off()
+            else:
+                for row in axes:
+                    if row[i].axison == False:
+                        row[i].set_axis_on()
+
 class fig_height_ratio(Animation):
     """
     Resize subplots' heights.
@@ -1010,6 +1032,8 @@ class fig_height_ratio(Animation):
         self.grid = None
         start_heights = np.ravel(start_heights)
         end_heights = np.ravel(end_heights)
+        start_heights = np.maximum(start_heights,1e-3)
+        end_heights = np.maximum(end_heights,1e-3)
         #Normalize the ratios so scaling with time remains linear
         start_heights = start_heights/np.sum(start_heights)
         end_heights = end_heights/np.sum(end_heights)
@@ -1042,6 +1066,18 @@ class fig_height_ratio(Animation):
         heights = anim['start'] + (anim['end'] - anim['start'])*t
         
         self.grid.set_height_ratios(heights)
+
+        axes = np.ravel(self.seq.fig.get_axes())
+        shape = self.seq.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
+        axes = axes.reshape(shape)
+        for i in range(len(heights)):
+            if heights[i] < 1e-3:
+                for column in axes.T:
+                    column[i].set_axis_off()
+            else:
+                for column in axes.T:
+                    if column[i].axison == False:
+                        column[i].set_axis_on()
 
 class scatter(Animation):
     """
