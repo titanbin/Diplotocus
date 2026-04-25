@@ -416,7 +416,7 @@ class Animation:
 
         obj = np.ravel(self.obj)
         for o in obj:
-            if type(o) == mpl.collections.Collection:
+            if isinstance(o, mpl.collections.Collection) and self.mpl_obj_type == mpl.collections.Collection:
                 offsets = np.asarray(o.get_offsets(), dtype=float).reshape(-1, 2)
                 offsets_centered = offsets - np.array([cx, cy])
 
@@ -452,8 +452,8 @@ class Animation:
         )
         
         obj = np.ravel(self.obj)
-        for o in obj:
-            if type(o) == mpl.collections.Collection:
+        for o in obj:            
+            if isinstance(o, mpl.collections.Collection) and self.mpl_obj_type == mpl.collections.Collection:
                 offsets = np.asarray(o.get_offsets(), dtype=float).reshape(-1, 2)
                 offsets_centered = offsets - np.array([cx, cy])
                 
@@ -857,7 +857,7 @@ class axis_alpha(Animation):
     Make the axis appear in 100 frames
         >>> axis_alpha(start_alpha=0,end_alpha=1,duration=100)
     """
-    def __init__(self,start_alpha,end_alpha,duration,delay=0,easing=easings.easeLinear(),axis=None,*args,**kwargs):
+    def __init__(self,start_alpha,end_alpha,duration,delay=0,alpha_objs=True,easing=easings.easeLinear(),axis=None,*args,**kwargs):
         super().__init__(axis=axis,*args, **kwargs)
         self.anims = [{
             'name':'axis_move',
@@ -867,6 +867,7 @@ class axis_alpha(Animation):
             'persistent':True,
             'start':start_alpha,
             'end':end_alpha,
+            'alpha_objs':alpha_objs,
             'played':False
         }]
         self.compute_timings()
@@ -899,23 +900,24 @@ class axis_alpha(Animation):
 
         self.axis.title.set_alpha(alpha)
 
-        for line in self.axis.get_xgridlines() + self.axis.get_ygridlines():
-            line.set_alpha(alpha)
-        for line in self.axis.lines:
-            line.set_alpha(alpha)
-        for col in self.axis.collections:
-            col.set_alpha(alpha)
-        for patch in self.axis.patches:
-            patch.set_alpha(alpha)
-        for img in self.axis.images:
-            img.set_alpha(alpha)
-        for txt in self.axis.texts:
-            txt.set_alpha(alpha)
-        leg = self.axis.get_legend()
-        if leg:
-            leg.get_frame().set_alpha(alpha)
-            for txt in leg.get_texts():
+        if anim['alpha_objs']:
+            for line in self.axis.get_xgridlines() + self.axis.get_ygridlines():
+                line.set_alpha(alpha)
+            for line in self.axis.lines:
+                line.set_alpha(alpha)
+            for col in self.axis.collections:
+                col.set_alpha(alpha)
+            for patch in self.axis.patches:
+                patch.set_alpha(alpha)
+            for img in self.axis.images:
+                img.set_alpha(alpha)
+            for txt in self.axis.texts:
                 txt.set_alpha(alpha)
+            leg = self.axis.get_legend()
+            if leg:
+                leg.get_frame().set_alpha(alpha)
+                for txt in leg.get_texts():
+                    txt.set_alpha(alpha)
 
 class fig_width_ratio(Animation):
     """
@@ -3162,12 +3164,18 @@ class contourf(Animation):
        compute contour locations.  More information can be found in
        `ContourPy documentation <https://contourpy.readthedocs.io>`_.
     """
-    def __init__(self, z, *args, **kwargs):
+    def __init__(self, z, x=None, y=None, *args, **kwargs):
         self.mpl_obj_type = mpl.contour.QuadContourSet
         self.mpl_plot_type = plt.contourf
         super().__init__(**kwargs)
         self.x = np.ravel(z)
         self.y = np.ravel(z)
+        self._x = x
+        self._y = y
+        if self._x is None:
+            self._x = range(z.shape[0])
+        if self._y is None:
+            self._y = range(z.shape[1])
         self.init_shape = z.shape
 
     def morph(self,new_z,duration,delay=0,easing=None,persistent=True,**kwargs):
@@ -3209,7 +3217,7 @@ class contourf(Animation):
         old_xlim = self.axis.get_xlim()
         old_ylim = self.axis.get_ylim()
         z = data_x
-        self.obj = self.axis.contourf(z,**kwargs)
+        self.obj = self.axis.contourf(self._x,self._y,z,**kwargs)
         self.axis.set_xlim(old_xlim)
         self.axis.set_ylim(old_ylim)
 
