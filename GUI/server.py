@@ -61,6 +61,27 @@ def _parse_scalar_like(value, default=None):
 
     return normalized
 
+def _parse_optional_float(value):
+    if value is None:
+        return None
+    if isinstance(value, str) and value.strip() == "":
+        return None
+
+    parsed = _parse_scalar_like(value, default=None)
+    if parsed is None:
+        return None
+    if isinstance(parsed, str) and parsed.strip() == "":
+        return None
+
+    return float(parsed)
+
+def _parse_optional_center(payload, key_x="center_x", key_y="center_y"):
+    cx = _parse_optional_float(payload.get(key_x))
+    cy = _parse_optional_float(payload.get(key_y))
+    if cx is None or cy is None:
+        return None
+    return (cx, cy)
+
 def _safe_name(name):
     text = str(name).strip().lower()
     text = re.sub(r"\s+", "_", text)
@@ -513,7 +534,7 @@ class GUI:
         props["plotObjectId"] = current_object_id
 
         name = clip_type
-        if name in {"translate", "scale", "axis_move"}:
+        if name in {"translate", "axis_move"}:
             start = anim.get("start", (0, 0))
             end = anim.get("end", (1, 1))
             props.update({
@@ -521,6 +542,23 @@ class GUI:
                 "start_y": float(start[1]),
                 "end_x": float(end[0]),
                 "end_y": float(end[1]),
+            })
+        elif name == "scale":
+            start = anim.get("start", (0, 0))
+            end = anim.get("end", (1, 1))
+            center = anim.get("center", None)
+            center_x = ""
+            center_y = ""
+            if center is not None and len(center) == 2:
+                center_x = float(center[0])
+                center_y = float(center[1])
+            props.update({
+                "start_x": float(start[0]),
+                "start_y": float(start[1]),
+                "end_x": float(end[0]),
+                "end_y": float(end[1]),
+                "center_x": center_x,
+                "center_y": center_y,
             })
         elif name == "axis_zoom":
             props.update({"zoom": float(anim.get("zoom", 1.0))})
@@ -534,9 +572,17 @@ class GUI:
                 "ylim_top": None if ylim is None else float(ylim[1]),
             })
         elif name == "rotate":
+            center = anim.get("center", None)
+            center_x = ""
+            center_y = ""
+            if center is not None and len(center) == 2:
+                center_x = float(center[0])
+                center_y = float(center[1])
             props.update({
                 "start": float(anim.get("start", 0)),
                 "end": float(anim.get("end", 360)),
+                "center_x": center_x,
+                "center_y": center_y,
             })
         elif name == "axis_alpha":
             props.update({
@@ -631,13 +677,21 @@ class GUI:
             anim["easing"] = getattr(easings, easing_name)()
 
         name = clip_type
-        if name in {"translate", "scale", "axis_move"}:
+        if name in {"translate", "axis_move"}:
             start_x = float(payload.get("start_x", anim.get("start", (0, 0))[0]))
             start_y = float(payload.get("start_y", anim.get("start", (0, 0))[1]))
             end_x = float(payload.get("end_x", anim.get("end", (1, 1))[0]))
             end_y = float(payload.get("end_y", anim.get("end", (1, 1))[1]))
             anim["start"] = (start_x, start_y)
             anim["end"] = (end_x, end_y)
+        elif name == "scale":
+            start_x = float(payload.get("start_x", anim.get("start", (0, 0))[0]))
+            start_y = float(payload.get("start_y", anim.get("start", (0, 0))[1]))
+            end_x = float(payload.get("end_x", anim.get("end", (1, 1))[0]))
+            end_y = float(payload.get("end_y", anim.get("end", (1, 1))[1]))
+            anim["start"] = (start_x, start_y)
+            anim["end"] = (end_x, end_y)
+            anim["center"] = _parse_optional_center(payload)
         elif name == "axis_zoom":
             anim["zoom"] = _safe_float(payload.get("zoom", anim.get("zoom", 1.0)), 1.0)
         elif name == "axis_limits":
@@ -654,6 +708,7 @@ class GUI:
         elif name == "rotate":
             anim["start"] = float(payload.get("start", anim.get("start", 0)))
             anim["end"] = float(payload.get("end", anim.get("end", 360)))
+            anim["center"] = _parse_optional_center(payload)
         elif name == "axis_alpha":
             anim["start"] = _safe_float(payload.get("start", anim.get("start", 1.0)), 1.0)
             anim["end"] = _safe_float(payload.get("end", anim.get("end", 1.0)), 1.0)

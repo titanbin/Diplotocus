@@ -42,6 +42,8 @@
     start_y: { wrap: "#dlgStartYWrap", input: "#dlgStartY", defaultValue: "", read: () => Number($("#dlgStartY").val() || 0) },
     end_x: { wrap: "#dlgEndXWrap", input: "#dlgEndX", defaultValue: "", read: () => Number($("#dlgEndX").val() || 0) },
     end_y: { wrap: "#dlgEndYWrap", input: "#dlgEndY", defaultValue: "", read: () => Number($("#dlgEndY").val() || 0) },
+    center_x: { wrap: "#dlgCenterXWrap", input: "#dlgCenterX", defaultValue: "", read: () => $("#dlgCenterX").val() },
+    center_y: { wrap: "#dlgCenterYWrap", input: "#dlgCenterY", defaultValue: "", read: () => $("#dlgCenterY").val() },
     start: { wrap: "#dlgStartWrap", input: "#dlgStart", defaultValue: "", read: () => Number($("#dlgStart").val() || 0) },
     end: { wrap: "#dlgEndWrap", input: "#dlgEnd", defaultValue: "", read: () => Number($("#dlgEnd").val() || 0) },
     tween_property: { wrap: "#dlgTweenPropsWrap", input: "#dlgTweenProps", defaultValue: "alpha", read: () => String($("#dlgTweenProps").val() || "alpha") },
@@ -59,8 +61,8 @@
 
   const DIALOG_TYPE_SCHEMAS = {
     translate: { fields: ["start_x", "start_y", "end_x", "end_y"], showObject: true },
-    scale: { fields: ["start_x", "start_y", "end_x", "end_y"], showObject: true },
-    rotate: { fields: ["start", "end"], showObject: true },
+    scale: { fields: ["start_x", "start_y", "end_x", "end_y", "center_x", "center_y"], showObject: true },
+    rotate: { fields: ["start", "end", "center_x", "center_y"], showObject: true },
     tween: { fields: ["tween_property", "tween_start", "tween_end"], showObject: true },
     draw: { fields: ['reverse'], showObject: true },
     morph: { fields: [], showObject: true },

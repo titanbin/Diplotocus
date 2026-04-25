@@ -515,7 +515,7 @@ Other : #1f4047
 
 .dialog-grid {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
 	gap: 8px;
 }
 
@@ -524,6 +524,17 @@ Other : #1f4047
 	flex-direction: column;
 	gap: 4px;
 	font-size: 12px;
+	grid-column: span 3;
+}
+
+#dlgObjectWrap {
+	grid-column: 1 / -1;
+}
+
+#dlgTweenPropsWrap,
+#dlgTweenStartsWrap,
+#dlgTweenEndsWrap {
+	grid-column: span 2;
 }
 
 .dialog-grid input,
