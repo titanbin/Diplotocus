@@ -1,0 +1,984 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="API Reference" href="../api/index.html"><link rel="prev" title="Quick-start guide" href="quick-start.html">
+        <link rel="prefetch" href="../_static/logo.svg" as="image">
+
+    <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
+        <title>Easing functions - diplotocus 2026 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=acfd86a5" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css?v=6644e6bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/force-light.css?v=3f75ed2f" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">diplotocus 2026 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../_static/logo.svg" alt="Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick-start.html">Quick-start guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Easing functions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/core.html">Core Module</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/notebooks/easings.ipynb.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section class="tex2jax_ignore mathjax_ignore" id="easing-functions">
+<h1>Easing functions<a class="headerlink" href="#easing-functions" title="Link to this heading">¶</a></h1>
+<p>By default, all animations are rendered with a linear time progression. If your video has multiple steps, the transition between them will appear abrupt as you end one and start another. This can be fixed by using <strong>easing functions</strong>. Easing functions are mappings between <em>frame number</em> and a <em>time parameter</em>. For example, you might want to start your animations slowly, and end very fast; in this case you’d want to use a non-linear easing function.</p>
+<p>There are multiple ways to use an easing function in diplotocus. You can either set an easing for a whole <em>sequence</em>, a <em>plot object</em>, a <em>seq.animate() function</em> or an <em>animation function</em>. If multiple easings are set, the priority goes from the more specific to the more general, i.e. the easing is selected in this order :</p>
+<ul class="simple">
+<li><p>an easing set on the <em>animation function</em>, or if not set :</p></li>
+<li><p>an easing set on the <em>seq.animate() function</em>, or if not set :</p></li>
+<li><p>an easing set on the <em>plot object</em>, or if not set :</p></li>
+<li><p>an easing set on the <em>sequence</em>, or if not set :</p></li>
+<li><p>no easing (i.e. <code class="docutils literal notranslate"><span class="pre">dpl.easeLinear()</span></code>).</p></li>
+</ul>
+<p>Here are all the easing functions implemented in diplotocus:</p>
+<section id="easelinear">
+<h2>easeLinear<a class="headerlink" href="#easelinear" title="Link to this heading">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">x</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeLinear.mp4?randId=8045" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="sine">
+<h2>Sine<a class="headerlink" href="#sine" title="Link to this heading">¶</a></h2>
+<section id="easeinsine">
+<h3>easeInSine:<a class="headerlink" href="#easeinsine" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">cos</span><span class="p">((</span><span class="n">x</span> <span class="o">*</span> <span class="n">π</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInSine.mp4?randId=6795" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeoutsine">
+<h3>easeOutSine():<a class="headerlink" href="#easeoutsine" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">sin</span><span class="p">((</span><span class="n">x</span> <span class="o">*</span> <span class="n">π</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeOutSine.mp4?randId=754" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeinoutsine">
+<h3>easeInOutSine():<a class="headerlink" href="#easeinoutsine" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">cos</span><span class="p">(</span><span class="n">π</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInOutSine.mp4?randId=5201" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+</section>
+<section id="quadratic">
+<h2>Quadratic<a class="headerlink" href="#quadratic" title="Link to this heading">¶</a></h2>
+<section id="easeinquad">
+<h3>easeInQuad():<a class="headerlink" href="#easeinquad" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInQuad.mp4?randId=8209" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeoutquad">
+<h3>easeOutQuad():<a class="headerlink" href="#easeoutquad" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeOutQuad.mp4?randId=1819" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeinoutquad">
+<h3>easeInOutQuad():<a class="headerlink" href="#easeinoutquad" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    f(x) = x &lt; 0.5 ? 2 * x^2 : 1 - (-2 * x + 2)^2 / 2
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInOutQuad.mp4?randId=2021" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+</section>
+<section id="cubic">
+<h2>Cubic<a class="headerlink" href="#cubic" title="Link to this heading">¶</a></h2>
+<section id="easeincubic">
+<h3>easeInCubic():<a class="headerlink" href="#easeincubic" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">x</span><span class="o">^</span><span class="mi">3</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInCubic.mp4?randId=8338" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeoutcubic">
+<h3>easeOutCubic():<a class="headerlink" href="#easeoutcubic" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span><span class="o">^</span><span class="mi">3</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeOutCubic.mp4?randId=5278" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeinoutcubic">
+<h3>easeInOutCubic():<a class="headerlink" href="#easeinoutcubic" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    f(x) = x &lt; 0.5 ? 4 * x^3 : 1 - (-2 * x + 2)^3 / 2
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInOutCubic.mp4?randId=3295" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+</section>
+<section id="quartic">
+<h2>Quartic<a class="headerlink" href="#quartic" title="Link to this heading">¶</a></h2>
+<section id="easeinquart">
+<h3>easeInQuart():<a class="headerlink" href="#easeinquart" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">x</span><span class="o">^</span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInQuart.mp4?randId=8964" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeoutquart">
+<h3>easeOutQuart():<a class="headerlink" href="#easeoutquart" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span><span class="o">^</span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeOutQuart.mp4?randId=1936" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeinoutquart">
+<h3>easeInOutQuart():<a class="headerlink" href="#easeinoutquart" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    f(x) = x &lt; 0.5 ? 8 * x^4 : 1 - (-2 * x + 2)^4 / 2
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInOutQuart.mp4?randId=9967" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+</section>
+<section id="quintic">
+<h2>Quintic<a class="headerlink" href="#quintic" title="Link to this heading">¶</a></h2>
+<section id="easeinquint">
+<h3>easeInQuint():<a class="headerlink" href="#easeinquint" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">x</span><span class="o">^</span><span class="mi">5</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInQuint.mp4?randId=2554" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeoutquint">
+<h3>easeOutQuint():<a class="headerlink" href="#easeoutquint" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span><span class="o">^</span><span class="mi">5</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeOutQuint.mp4?randId=2306" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeinoutquint">
+<h3>easeInOutQuint():<a class="headerlink" href="#easeinoutquint" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    f(x) = x &lt; 0.5 ? 16 * x^5 : 1 - (-2 * x + 2)^5 / 2
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInOutQuint.mp4?randId=2051" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+</section>
+<section id="exponential">
+<h2>Exponential<a class="headerlink" href="#exponential" title="Link to this heading">¶</a></h2>
+<section id="easeinexpo">
+<h3>easeInExpo():<a class="headerlink" href="#easeinexpo" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    f(x) = x === 0 ? 0 : 2^(10 * x - 10)
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInExpo.mp4?randId=4373" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeoutexpo">
+<h3>easeOutExpo():<a class="headerlink" href="#easeoutexpo" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    f(x) = x === 1 ? 1 : 1 - 2^(-10 * x)
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeOutExpo.mp4?randId=1365" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeinoutexpo">
+<h3>easeInOutExpo():<a class="headerlink" href="#easeinoutexpo" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    f(x) = x === 0
+        ? 0
+        : x === 1
+        ? 1
+        : x &lt; 0.5 ? Math.pow(2, 20 * x - 10) / 2
+        : (2 - Math.pow(2, -20 * x + 10)) / 2
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInOutExpo.mp4?randId=4434" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+</section>
+<section id="circular">
+<h2>Circular<a class="headerlink" href="#circular" title="Link to this heading">¶</a></h2>
+<section id="easeincirc">
+<h3>easeInCirc():<a class="headerlink" href="#easeincirc" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInCirc.mp4?randId=4820" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeoutcirc">
+<h3>easeOutCirc():<a class="headerlink" href="#easeoutcirc" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeOutCirc.mp4?randId=5740" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeinoutcirc">
+<h3>easeInOutCirc():<a class="headerlink" href="#easeinoutcirc" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    f(x) = x &lt; 0.5
+        ? (1 - sqrt(1 - (2 * x)^2)) / 2
+        : (sqrt(1 - (-2 * x + 2)^2) + 1) / 2
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInOutCirc.mp4?randId=5368" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+</section>
+<section id="back">
+<h2>Back<a class="headerlink" href="#back" title="Link to this heading">¶</a></h2>
+<section id="easeinback">
+<h3>easeInBack():<a class="headerlink" href="#easeinback" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">c1</span> <span class="o">=</span> <span class="mf">1.70158</span>
+    <span class="n">c3</span> <span class="o">=</span> <span class="n">c1</span> <span class="o">+</span> <span class="mi">1</span>
+    
+    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">c3</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">x</span> <span class="o">-</span> <span class="n">c1</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">x</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInBack.mp4?randId=754" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeoutback">
+<h3>easeOutBack():<a class="headerlink" href="#easeoutback" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">c1</span> <span class="o">=</span> <span class="mf">1.70158</span>
+    <span class="n">c3</span> <span class="o">=</span> <span class="n">c1</span> <span class="o">+</span> <span class="mi">1</span>
+    
+    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">c3</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">^</span><span class="mi">3</span> <span class="o">+</span> <span class="n">c1</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">^</span><span class="mi">2</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeOutBack.mp4?randId=2312" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeinoutback">
+<h3>easeInOutBack():<a class="headerlink" href="#easeinoutback" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    c1 = 1.70158
+    c2 = c1 * 1.525
+    
+    f(x) = x &lt; 0.5
+        ? ((2 * x)^2 * ((c2 + 1) * 2 * x - c2)) / 2
+        : ((2 * x - 2)^2 * ((c2 + 1) * (x * 2 - 2) + c2) + 2) / 2
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInOutBack.mp4?randId=1120" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+</section>
+<section id="elastic">
+<h2>Elastic<a class="headerlink" href="#elastic" title="Link to this heading">¶</a></h2>
+<section id="easeinelastic">
+<h3>easeInElastic():<a class="headerlink" href="#easeinelastic" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    c4 = (2 * π) / 3
+
+    f(x) = x === 0
+        ? 0
+        : x === 1
+        ? 1
+        : -2^(10 * x - 10) * sin((x * 10 - 10.75) * c4)
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInElastic.mp4?randId=9788" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeoutelastic">
+<h3>easeOutElastic():<a class="headerlink" href="#easeoutelastic" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    c4 = (2 * π) / 3
+
+    f(x) = x === 0
+        ? 0
+        : x === 1
+        ? 1
+        : 2^(-10 * x) * sin((x * 10 - 0.75) * c4) + 1
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeOutElastic.mp4?randId=8762" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeinoutelastic">
+<h3>easeInOutElastic():<a class="headerlink" href="#easeinoutelastic" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    c4 = c5 = (2 * π) / 4.5
+
+    f(x) = x === 0
+        ? 0
+        : x === 1
+        ? 1
+        : x &lt; 0.5
+        ? -(2^(20 * x - 10) * sin((20 * x - 11.125) * c5)) / 2
+        : (2^(-20 * x + 10) * sin((20 * x - 11.125) * c5)) / 2 + 1
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInOutElastic.mp4?randId=3307" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+</section>
+<section id="bounce">
+<h2>Bounce<a class="headerlink" href="#bounce" title="Link to this heading">¶</a></h2>
+<section id="easeinbounce">
+<h3>easeInBounce():<a class="headerlink" href="#easeinbounce" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">f_easeOutBounce</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInBounce.mp4?randId=7882" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeoutbounce">
+<h3>easeOutBounce():<a class="headerlink" href="#easeoutbounce" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    <span class="n">n1</span> <span class="o">=</span> <span class="mf">7.5625</span>
+    <span class="n">d1</span> <span class="o">=</span> <span class="mf">2.75</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">d1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">n1</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">x</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">d1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">n1</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-=</span> <span class="mf">1.5</span> <span class="o">/</span> <span class="n">d1</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="mf">0.75</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="mf">2.5</span> <span class="o">/</span> <span class="n">d1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">n1</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-=</span> <span class="mf">2.25</span> <span class="o">/</span> <span class="n">d1</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="mf">0.9375</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">f</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="n">n1</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-=</span> <span class="mf">2.625</span> <span class="o">/</span> <span class="n">d1</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="mf">0.984375</span>
+    <span class="p">}</span>
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeOutBounce.mp4?randId=9002" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="easeinoutbounce">
+<h3>easeInOutBounce():<a class="headerlink" href="#easeinoutbounce" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    f(x) = 1 - f_easeOutBounce(1 - x)
+    f(x) = x &lt; 0.5
+        ? (1 - f_easeOutBounce(1 - 2 * x)) / 2
+        : (1 + f_easeOutBounce(2 * x - 1)) / 2
+</pre></div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/easeInOutBounce.mp4?randId=3579" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+</section>
+<section id="easecubicbezier-x1-y1-x2-y2">
+<h2>easeCubicBezier(x1,y1,x2,y2)<a class="headerlink" href="#easecubicbezier-x1-y1-x2-y2" title="Link to this heading">¶</a></h2>
+<p>This function lets you define a custom easing function, as a <a class="reference external" href="https://en.wikipedia.org/wiki/B%C3%A9zier_curve#Cubic_B%C3%A9zier_curves">cubic Bézier curve</a>. The implementation is similar to the CSS one, i.e. it is inverting the x(t)=t relation to find a y(t) solution, given the positions of the control points P1=(x1,y1) and P2=(x2,y2).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You can use <a class="reference external" href="https://cubic-bezier.com">cubic-bezier.com</a> to find the right easing for you.</p>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ease</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">easings</span><span class="o">.</span><span class="n">easeCubicBezier</span><span class="p">(</span><span class="mf">.43</span><span class="p">,</span><span class="o">-</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">.56</span><span class="p">,</span><span class="mf">1.5</span><span class="p">)</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">200</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="p">[</span><span class="n">ease</span><span class="o">.</span><span class="n">ease</span><span class="p">(</span><span class="n">el</span><span class="p">)</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">x</span><span class="p">]</span>
+
+<span class="n">ease_str</span> <span class="o">=</span> <span class="s1">&#39;Cubic Bézier&#39;</span>
+
+<span class="n">lims</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.1</span><span class="p">,</span><span class="mf">1.1</span><span class="p">)</span>
+
+<span class="n">seq</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">quiet</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="mi">5</span><span class="p">),</span><span class="n">xlim</span><span class="o">=</span><span class="n">lims</span><span class="p">,</span><span class="n">ylim</span><span class="o">=</span><span class="n">lims</span><span class="p">,</span><span class="n">noaxis</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">main_axis</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span><span class="mf">0.8</span><span class="p">,</span><span class="n">ease_str</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span><span class="mf">0.3</span><span class="p">,</span><span class="s1">&#39;Linear&#39;</span><span class="p">,</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">e</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">0.75</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span><span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span><span class="n">markersize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span><span class="n">easing</span><span class="o">=</span><span class="n">ease</span><span class="p">)</span>
+<span class="n">l</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span><span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span><span class="n">markersize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;C0&#39;</span><span class="p">)</span>
+<span class="n">e</span><span class="o">.</span><span class="n">translate</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span><span class="mi">200</span><span class="p">)</span>
+<span class="n">l</span><span class="o">.</span><span class="n">translate</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span><span class="mi">200</span><span class="p">)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">animate</span><span class="p">((</span><span class="n">e</span><span class="p">,</span><span class="n">l</span><span class="p">,</span><span class="n">p</span><span class="p">))</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="mi">25</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">save_video</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s1">&#39;../_static/cubicBezier.mp4&#39;</span><span class="p">,</span><span class="n">speed</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/cubicBezier.mp4?randId=4646" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+<section id="custom-easing-function">
+<h2>custom easing function<a class="headerlink" href="#custom-easing-function" title="Link to this heading">¶</a></h2>
+<p>For more complicated easing functions than cubic Bézier curves, you can define your own by creating a child class of the <code class="docutils literal notranslate"><span class="pre">diplotocus.easings.Easing</span></code> class. All you have to do is define its <code class="docutils literal notranslate"><span class="pre">ease(self,x)</span></code> method so it returns a time parameter for a given linear time <code class="docutils literal notranslate"><span class="pre">x</span></code>. Here’s an example:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">myEase</span><span class="p">(</span><span class="n">dpl</span><span class="o">.</span><span class="n">easings</span><span class="o">.</span><span class="n">Easing</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">ease</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mf">0.75</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="mi">4</span><span class="o">/</span><span class="mf">.75</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="mi">5</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">((</span><span class="n">x</span><span class="o">-</span><span class="mf">.75</span><span class="p">)</span><span class="o">/</span><span class="mf">.25</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell tag_remove-input docutils container">
+<div class="cell_output docutils container">
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="../_static/customEase.mp4?randId=5319" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="../api/index.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">API Reference</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="quick-start.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Quick-start guide</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, Tristan Boin
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Easing functions</a><ul>
+<li><a class="reference internal" href="#easelinear">easeLinear</a></li>
+<li><a class="reference internal" href="#sine">Sine</a><ul>
+<li><a class="reference internal" href="#easeinsine">easeInSine:</a></li>
+<li><a class="reference internal" href="#easeoutsine">easeOutSine():</a></li>
+<li><a class="reference internal" href="#easeinoutsine">easeInOutSine():</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#quadratic">Quadratic</a><ul>
+<li><a class="reference internal" href="#easeinquad">easeInQuad():</a></li>
+<li><a class="reference internal" href="#easeoutquad">easeOutQuad():</a></li>
+<li><a class="reference internal" href="#easeinoutquad">easeInOutQuad():</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#cubic">Cubic</a><ul>
+<li><a class="reference internal" href="#easeincubic">easeInCubic():</a></li>
+<li><a class="reference internal" href="#easeoutcubic">easeOutCubic():</a></li>
+<li><a class="reference internal" href="#easeinoutcubic">easeInOutCubic():</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#quartic">Quartic</a><ul>
+<li><a class="reference internal" href="#easeinquart">easeInQuart():</a></li>
+<li><a class="reference internal" href="#easeoutquart">easeOutQuart():</a></li>
+<li><a class="reference internal" href="#easeinoutquart">easeInOutQuart():</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#quintic">Quintic</a><ul>
+<li><a class="reference internal" href="#easeinquint">easeInQuint():</a></li>
+<li><a class="reference internal" href="#easeoutquint">easeOutQuint():</a></li>
+<li><a class="reference internal" href="#easeinoutquint">easeInOutQuint():</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#exponential">Exponential</a><ul>
+<li><a class="reference internal" href="#easeinexpo">easeInExpo():</a></li>
+<li><a class="reference internal" href="#easeoutexpo">easeOutExpo():</a></li>
+<li><a class="reference internal" href="#easeinoutexpo">easeInOutExpo():</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#circular">Circular</a><ul>
+<li><a class="reference internal" href="#easeincirc">easeInCirc():</a></li>
+<li><a class="reference internal" href="#easeoutcirc">easeOutCirc():</a></li>
+<li><a class="reference internal" href="#easeinoutcirc">easeInOutCirc():</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#back">Back</a><ul>
+<li><a class="reference internal" href="#easeinback">easeInBack():</a></li>
+<li><a class="reference internal" href="#easeoutback">easeOutBack():</a></li>
+<li><a class="reference internal" href="#easeinoutback">easeInOutBack():</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#elastic">Elastic</a><ul>
+<li><a class="reference internal" href="#easeinelastic">easeInElastic():</a></li>
+<li><a class="reference internal" href="#easeoutelastic">easeOutElastic():</a></li>
+<li><a class="reference internal" href="#easeinoutelastic">easeInOutElastic():</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#bounce">Bounce</a><ul>
+<li><a class="reference internal" href="#easeinbounce">easeInBounce():</a></li>
+<li><a class="reference internal" href="#easeoutbounce">easeOutBounce():</a></li>
+<li><a class="reference internal" href="#easeinoutbounce">easeInOutBounce():</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#easecubicbezier-x1-y1-x2-y2">easeCubicBezier(x1,y1,x2,y2)</a></li>
+<li><a class="reference internal" href="#custom-easing-function">custom easing function</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=fc6fd62b"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../_static/force-light.js?v=c95df7bc"></script>
+    </body>
+</html>

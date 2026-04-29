@@ -1,25 +1,31 @@
-/* Force Furo to light mode */
-:root {
+/* Force Furo to light mode and hide the theme toggle */
+:root,
+html,
+body,
+[data-theme] {
   color-scheme: light !important;
-}
-
-html {
-  color-scheme: light !important;
-}
-
-html[data-theme="dark"] {
-  --color-scheme: light !important;
-}
-
-/* Prevent auto-switching */
-html[data-theme="dark"] {
   background-color: var(--color-background-primary) !important;
+  color: var(--color-foreground-primary) !important;
 }
 
-.content-icon-container{
-  display: none;
+html[data-theme="dark"], body[data-theme="dark"], [data-theme="dark"] {
+  color-scheme: light !important;
 }
 
-.back-to-top{
+/* Hide the theme toggle controls so visitors cannot switch */
+.theme-toggle,
+.toggle-color-mode,
+.toggle-theme,
+.sd-theme-toggle,
+button[aria-label^="Toggle color"],
+button[aria-label*="theme"] {
   display: none !important;
+}
+
+/* Ensure sidebar logo and notebook outputs remain visible */
+.content-icon-container{
+  display: block !important;
+}
+.nboutput, .output, .jp-OutputArea, .output_area {
+  display: block !important;
 }

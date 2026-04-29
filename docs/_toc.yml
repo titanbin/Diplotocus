@@ -6,6 +6,7 @@ root: index
 
 chapters:
   - file: installation
+  - file: quick-start
   - file: functions/index
     sections:
       - file: functions/plot
