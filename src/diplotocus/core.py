@@ -13,6 +13,9 @@ except:
 from .easings import *
 from .animations import *
 
+if shutil.which("ffmpeg") is None:
+    raise UserWarning("FFmpeg is required to render videos, but is not installed. Please install it system-wide.")
+
 def in_notebook():
     try:
         from IPython import get_ipython

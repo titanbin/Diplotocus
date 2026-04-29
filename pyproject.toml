@@ -13,7 +13,7 @@ dependencies = [
 authors = [
   { name="Tristan Boin", email="tristan.boin@obspm.fr" },
 ]
-description = "A python package to generate animations using pyplot."
+description = "A python package to generate animations of matplotlib objects."
 readme = "diplotocus/readme.md"
 classifiers = [
   'Intended Audience :: Science/Research',

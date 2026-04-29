@@ -251,31 +251,235 @@
         <article role="main" id="furo-main-content">
           <section class="tex2jax_ignore mathjax_ignore" id="welcome-to-diplotocus-documentation">
 <h1>Welcome to diplotocus’ documentation!<a class="headerlink" href="#welcome-to-diplotocus-documentation" title="Link to this heading">¶</a></h1>
-<center><video width="700" height="394" autoplay muted playsinline><source src="_static/logo.mp4" type="video/mp4"></video></center><p><strong>Diplotocus</strong> is a python package designed to render animations of matplotlib plots, in a <em>timeline</em> style.</p>
+<center><video width="700" height="394" autoplay muted playsinline><source src="_static/logo.mp4" type="video/mp4"></video></center><p><strong>Diplotocus</strong> is a python package designed to render animations of matplotlib objects, in a <em>timeline</em> style.</p>
 <p>Here’s a quick example of the syntax of diplotocus:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">diplotocus</span> <span class="k">as</span> <span class="nn">dpl</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
+<span class="c1">#We define our Sequence, the object that handles all animations on our figure</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">xlim</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">6</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">),</span><span class="n">ylim</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
+
+<span class="c1">#We generate data points</span>
 <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">6</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span><span class="mi">200</span><span class="p">)</span>
 <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 
-<span class="n">seq</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">Sequence</span><span class="p">()</span>
-<span class="n">plot</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
-<span class="n">seq</span><span class="o">.</span><span class="n">animate</span><span class="p">(</span><span class="n">plot</span><span class="o">.</span><span class="n">spawn</span><span class="p">())</span>
+<span class="c1">#We create a plot() object</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span>
+
+<span class="c1">#We draw its data points sequentially</span>
+<span class="n">p</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">animate</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+<span class="c1">#We wait 25 frames</span>
 <span class="n">seq</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span>
-<span class="n">seq</span><span class="o">.</span><span class="n">animate</span><span class="p">((</span><span class="n">dpl</span><span class="o">.</span><span class="n">axis_zoom</span><span class="p">(</span><span class="n">zoom</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">50</span><span class="p">),</span><span class="n">dpl</span><span class="o">.</span><span class="n">axis_move</span><span class="p">(</span><span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span><span class="n">duration</span><span class="o">=</span><span class="mi">50</span><span class="p">)))</span>
-<span class="n">seq</span><span class="o">.</span><span class="n">animate</span><span class="p">(</span><span class="n">plot</span><span class="o">.</span><span class="n">hide</span><span class="p">())</span>
-<span class="n">seq</span><span class="o">.</span><span class="n">save_video</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s1">&#39;_static/test.mp4&#39;</span><span class="p">)</span>
+
+<span class="c1">#We unzoom and move the axis to (0,0)</span>
+<span class="n">az</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">axis_zoom</span><span class="p">(</span><span class="n">zoom</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">am</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">axis_move</span><span class="p">(</span><span class="n">end_pos</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span><span class="n">duration</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">animate</span><span class="p">((</span><span class="n">az</span><span class="p">,</span><span class="n">am</span><span class="p">))</span>
+
+<span class="c1">#We hide the plot</span>
+<span class="n">p</span><span class="o">.</span><span class="n">hide</span><span class="p">(</span><span class="n">duration</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">animate</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+<span class="c1">#We render our video</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">save_video</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s1">&#39;_static/demo.mp4&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "ae56a72ccc334f73abf9139724bf242b", "version_major": 2, "version_minor": 0}</script><script type="application/vnd.jupyter.widget-view+json">{"model_id": "1f607ba9c3084ff99c8f929a86c64f2b", "version_major": 2, "version_minor": 0}</script><script type="application/vnd.jupyter.widget-view+json">{"model_id": "d378dad3b062401299ac265e3b174172", "version_major": 2, "version_minor": 0}</script><p>Saved video _static/test.mp4</p>
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "b24f0b7ce0594740987fb1dc08a4dfa9", "version_major": 2, "version_minor": 0}</script><script type="application/vnd.jupyter.widget-view+json">{"model_id": "a05843e8c92342a9a66247c99c2593b6", "version_major": 2, "version_minor": 0}</script><script type="application/vnd.jupyter.widget-view+json">{"model_id": "62088f6f80084bd8aa1e610f3f7d143d", "version_major": 2, "version_minor": 0}</script><p>Saved video _static/test.mp4</p>
 <div class="output text_html">
             <video width="640" height="360" autoplay loop muted playsinline>
-            <source src="_static/test.mp4" type="video/mp4">
+            <source src="_static/test.mp4?randId=8004" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">diplotocus</span> <span class="k">as</span> <span class="nn">dpl</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">seq</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;ee&#39;</span><span class="p">,</span><span class="n">transparent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">white</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">plot</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">translate</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">40</span><span class="p">,</span><span class="mi">40</span><span class="p">),</span><span class="n">duration</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">tweens</span><span class="p">((</span><span class="s1">&#39;c&#39;</span><span class="p">,</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span><span class="s1">&#39;lw&#39;</span><span class="p">),(</span><span class="s1">&#39;C1&#39;</span><span class="p">,</span><span class="mf">0.25</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="s1">&#39;C2&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="p">),</span><span class="n">duration</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="s2">&quot;M43.3,2l41.57,72H1.73L43.3,2m0-2L0,75H86.6L43.3,0h0Z&quot;</span>
+<span class="n">svg</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">svg</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">rotate</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">360</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.25</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+
+<span class="n">axis_move</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">axis_move</span><span class="p">((</span><span class="mi">60</span><span class="p">,</span><span class="mi">60</span><span class="p">),</span><span class="n">duration</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span><span class="n">delay</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">axis_zoom</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">axis_zoom</span><span class="p">(</span><span class="mf">0.75</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span><span class="n">delay</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">animate</span><span class="p">([</span><span class="n">plot</span><span class="p">,</span><span class="n">svg</span><span class="p">,</span><span class="n">axis_move</span><span class="p">])</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">animate</span><span class="p">(</span><span class="n">axis_zoom</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">save_video</span><span class="p">(</span><span class="s1">&#39;test.mov&#39;</span><span class="p">,</span><span class="n">clean</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "da2441699bcc46b698e9a9cf441bd0b9", "version_major": 2, "version_minor": 0}</script><script type="application/vnd.jupyter.widget-view+json">{"model_id": "1c480dfc85a4475eae1ee11b31d4d35b", "version_major": 2, "version_minor": 0}</script><p>Saved video test.mov</p>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[concat @ 0x960c5c000] Impossible to open &#39;ee/ee_549.png&#39;
+[in#0/concat @ 0x96101c000] Error during demuxing: No such file or directory
+</pre></div>
+</div>
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="test.mov" type="video/mp4">
+            </video>
+        </div></div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">diplotocus</span> <span class="k">as</span> <span class="nn">dpl</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">seq</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">Sequence</span><span class="p">()</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">plot</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span><span class="o">.</span><span class="n">translate</span><span class="p">((</span><span class="mi">40</span><span class="p">,</span><span class="mi">40</span><span class="p">))</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">6</span><span class="p">)</span><span class="o">.</span><span class="n">tweens</span><span class="p">((</span><span class="s1">&#39;c&#39;</span><span class="p">,</span><span class="s1">&#39;alpha&#39;</span><span class="p">,</span><span class="s1">&#39;lw&#39;</span><span class="p">),(</span><span class="s1">&#39;C1&#39;</span><span class="p">,</span><span class="mf">0.25</span><span class="p">,</span><span class="mi">1</span><span class="p">),(</span><span class="s1">&#39;C2&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
+
+<span class="n">path</span> <span class="o">=</span> <span class="s2">&quot;M43.3,2l41.57,72H1.73L43.3,2m0-2L0,75H86.6L43.3,0h0Z&quot;</span>
+<span class="n">svg</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">svg</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span><span class="n">delay</span><span class="o">=</span><span class="mi">25</span><span class="p">)</span><span class="o">.</span><span class="n">rotate</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">360</span><span class="p">)</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.25</span><span class="p">)</span>
+
+<span class="n">seq</span><span class="o">.</span><span class="n">animate</span><span class="p">([</span><span class="n">plot</span><span class="p">,</span><span class="n">svg</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "38fa0dbb383d4601a84eb5b06a937a9c", "version_major": 2, "version_minor": 0}</script><img alt="_images/bb887f828b112909d6812356a219bd70f41a8c72f0021d860268ab15ea6affb7.png" src="_images/bb887f828b112909d6812356a219bd70f41a8c72f0021d860268ab15ea6affb7.png" />
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">diplotocus</span> <span class="k">as</span> <span class="nn">dpl</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">x2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">y2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x2</span><span class="p">)</span>
+<span class="n">x2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x2</span><span class="p">)</span><span class="o">*</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">5</span>
+
+<span class="n">a</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">)</span><span class="c1">#,marker=&#39;.&#39;,facecolor=&#39;r&#39;,edgecolor=&#39;g&#39;,s=100)</span>
+<span class="c1">#a = a.translate(duration=120,delay=36,start_pos=(0,0),end_pos=(1,1))</span>
+<span class="c1">#a = a.rotate(duration=120,delay=36,angle_start=0,angle_end=360)</span>
+<span class="c1">#a = a.scale(duration=120,delay=36,scale_start=1,scale_end=0.2)</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">morph</span><span class="p">(</span><span class="n">new_x</span><span class="o">=</span><span class="n">x2</span><span class="p">,</span><span class="n">new_y</span><span class="o">=</span><span class="n">y2</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">transparent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">white</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">x</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="c1">#seq.save_video(&#39;test.mov&#39;)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">bins</span><span class="o">=</span><span class="p">[</span><span class="mi">100</span><span class="p">]);</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="_images/e69388c35ecf0f36becfa27b671d437cee4261516d54a082a29af64fda556b98.png" src="_images/e69388c35ecf0f36becfa27b671d437cee4261516d54a082a29af64fda556b98.png" />
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">diplotocus</span> <span class="k">as</span> <span class="nn">dpl</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">x2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">y2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x2</span><span class="p">)</span>
+<span class="n">x2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x2</span><span class="p">)</span><span class="o">*</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">5</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">10000</span><span class="p">)</span>
+
+<span class="n">a</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span><span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="c1">#,marker=&#39;.&#39;,facecolor=&#39;r&#39;,edgecolor=&#39;g&#39;,s=100)</span>
+<span class="c1">#a = a.translate(duration=120,delay=36,start_pos=(0,0),end_pos=(1,1))</span>
+<span class="c1">#a = a.rotate(duration=120,delay=36,angle_start=0,angle_end=360)</span>
+<span class="c1">#a = a.scale(duration=120,delay=36,scale_start=1,scale_end=0.2)</span>
+<span class="c1">#a = a.morph(new_x=x2,new_y=y2,duration=100)</span>
+<span class="c1">#a.scale((0,0),(1,10),duration=100)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">rotate</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">360</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="c1">#a.tween(&#39;color&#39;,&#39;C0&#39;,&#39;C1&#39;,duration=100)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">tween</span><span class="p">(</span><span class="s1">&#39;bins&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="n">duration</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">transparent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">white</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">x</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="c1">#seq.animate(a)</span>
+<span class="c1">#seq.save_video(&#39;test.mov&#39;)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">matplotlib.lines</span> <span class="kn">import</span> <span class="n">Line2D</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="n">obj</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">hist</span>
+<span class="n">par</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">([</span><span class="mi">1</span><span class="p">,])[</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+
+<span class="n">sig</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+<span class="n">kwargs</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">param</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">sig</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span>
+    <span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">param</span><span class="o">.</span><span class="n">KEYWORD_ONLY</span> <span class="ow">or</span> <span class="n">param</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">param</span><span class="o">.</span><span class="n">VAR_KEYWORD</span> <span class="ow">or</span> <span class="n">param</span><span class="o">.</span><span class="n">default</span> <span class="o">!=</span> <span class="n">param</span><span class="o">.</span><span class="n">empty</span><span class="p">)</span>
+    <span class="ow">and</span> <span class="n">param</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s1">&#39;kwargs&#39;</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+
+<span class="n">sig</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">par</span><span class="p">)</span>
+<span class="n">kwargs</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">param</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">sig</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span>
+    <span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">param</span><span class="o">.</span><span class="n">KEYWORD_ONLY</span> <span class="ow">or</span> <span class="n">param</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">param</span><span class="o">.</span><span class="n">VAR_KEYWORD</span> <span class="ow">or</span> <span class="n">param</span><span class="o">.</span><span class="n">default</span> <span class="o">!=</span> <span class="n">param</span><span class="o">.</span><span class="n">empty</span><span class="p">)</span>
+    <span class="ow">and</span> <span class="n">param</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="s1">&#39;kwargs&#39;</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;bins&#39;, &#39;range&#39;, &#39;density&#39;, &#39;weights&#39;, &#39;cumulative&#39;, &#39;bottom&#39;, &#39;histtype&#39;, &#39;align&#39;, &#39;orientation&#39;, &#39;rwidth&#39;, &#39;log&#39;, &#39;color&#39;, &#39;label&#39;, &#39;stacked&#39;, &#39;data&#39;]
+[&#39;angle&#39;, &#39;rotation_point&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">diplotocus</span> <span class="k">as</span> <span class="nn">dpl</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="c1">#dpl.easings.easeInBack()</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">translate</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">),</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">fig</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="n">dpl</span><span class="o">.</span><span class="n">Sequence</span><span class="p">(</span><span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span><span class="n">easing</span><span class="o">=</span><span class="n">dpl</span><span class="o">.</span><span class="n">easings</span><span class="o">.</span><span class="n">easeInBounce</span><span class="p">())</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">animate</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="n">seq</span><span class="o">.</span><span class="n">save_video</span><span class="p">(</span><span class="s1">&#39;eeeee.mov&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>None
+</pre></div>
+</div>
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "e08505e4c3334bd8b51503ad9d201d35", "version_major": 2, "version_minor": 0}</script><p>Saved video eeeee.mov</p>
+<div class="output text_html">
+            <video width="640" height="360" autoplay loop muted playsinline>
+            <source src="eeeee.mov" type="video/mp4">
             </video>
         </div></div>
 </div>

@@ -696,6 +696,7 @@ class axis_zoom(Animation):
         >>> axis_zoom(zoom=2,duration=100)
     """
     def __init__(self,zoom,duration,delay=0,easing=None,axis=None,*args,**kwargs):
+        zoom = 1/zoom
         super().__init__(axis=axis,*args, **kwargs)
         self.anims = [{
             'name':'axis_move',

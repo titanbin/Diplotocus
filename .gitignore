@@ -1,6 +1,5 @@
 __pycache__/
 *.mov
-*.mp4
 *.ai
 GUI_web/.DS_Store
 .DS_Store
@@ -14,3 +13,4 @@ diplotocus.egg-info
 generate_doc_api.py
 dist
 src/diplotocus/INFO
+INFO
