@@ -52,9 +52,24 @@ def load_project(path):
     return seq,animations
 
 class Sequence:
-    def __init__(self,name='Unnamed',fig=None,quiet=False,dpi=200,transparent=False,white=False,noaxis=False,easing=easeLinear()):
+    def __init__(self,
+                 name='Unnamed',
+                 fig=None,
+                 quiet=False,
+                 dpi=200,
+                 transparent=False,
+                 white=False,
+                 noaxis=False,
+                 easing=easeLinear(),
+                 xlim=None,
+                 ylim=None,
+                 figsize=None
+        ):
         if fig is None:
-            fig,_ = plt.subplots()
+            if figsize is not None:
+                fig,_ = plt.subplots(figsize=figsize)    
+            else:
+                fig,_ = plt.subplots()
         self.fig = fig
         self.ax = self.fig.get_axes()
         if len(self.ax) == 1:
@@ -68,6 +83,10 @@ class Sequence:
                 self.main_axis = self.ax[0]
         else:
             self.main_axis = self.ax
+        if xlim is not None:
+            self.main_axis.set_xlim(*xlim)
+        if ylim is not None:
+            self.main_axis.set_ylim(*ylim)
         self.name = name
         self.quiet = quiet
         self.dpi = dpi
@@ -243,13 +262,15 @@ class Sequence:
         plt.close()
         if not self.quiet:
             update()
+        
+        rand_id = np.random.randint(0,10_000)
         if is_gif:
-            return display(HTML('<img src="{}" style="max-width:640px;height:auto;" />'.format(video_fn)))
+            return display(HTML('<img src="{}?randId={}" style="max-width:640px;height:auto;" />'.format(video_fn,rand_id)))
         return display(HTML("""
             <video width="640" height="360" autoplay loop muted playsinline>
-            <source src="{}" type="video/mp4">
+            <source src="{}?randId={}" type="video/mp4">
             </video>
-        """.format(video_fn)))
+        """.format(video_fn,rand_id)))
     
     def save_project(self,path):
         with open(path, 'wb') as f:

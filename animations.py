@@ -26,6 +26,12 @@ def dealias(mpl_obj,kwargs):
 
     return kwargs
 
+def to_np_array(obj):
+    obj = np.array(obj)
+    if obj.ndim == 0:
+        obj = np.ravel(obj)
+    return obj
+
 class Animation:
     """
     A parent Animation object for all plotting objects.
@@ -106,7 +112,7 @@ class Animation:
         if self.mpl_obj_type is None:
             return properties
         is_iterable = isinstance(properties,(list,np.ndarray,tuple))
-        properties = np.ravel(properties).astype(np.object_)
+        properties = to_np_array(properties).astype(np.object_)
         for i,property in enumerate(properties):
             if property not in self.alias_map:
                 for alias in self.alias_map:
@@ -141,17 +147,17 @@ class Animation:
         self.check_transforms(x)
 
     def anim_function(self,x,kwargs):
-        data_x = np.ravel(self.x)
-        data_y = np.ravel(self.y)
+        data_x = to_np_array(self.x)
+        data_y = to_np_array(self.y)
         if self.__class__.__name__ == 'errorbar':
-            data_x_err = np.ravel(self.xerr)
-            data_y_err = np.ravel(self.yerr)
+            data_x_err = to_np_array(self.xerr)
+            data_y_err = to_np_array(self.yerr)
         elif self.__class__.__name__ == 'fill_between':
-            y1 = np.ravel(self.y1)
-            y2 = np.ravel(self.y2)
+            y1 = to_np_array(self.y1)
+            y2 = to_np_array(self.y2)
         elif self.__class__.__name__ == 'fill_betweenx':
-            x1 = np.ravel(self.x1)
-            x2 = np.ravel(self.x2)
+            x1 = to_np_array(self.x1)
+            x2 = to_np_array(self.x2)
 
         #First pass to get frame if sequencing
         for anim in self.anims:
@@ -194,7 +200,7 @@ class Animation:
             t = self.get_t_from_x(anim,x)
 
             if 'alpha' in kwargs:
-                alpha = np.ravel(kwargs['alpha'])
+                alpha = to_np_array(kwargs['alpha'])
                 if np.sum(alpha) == 0:
                     kwargs['alpha'] = 1
 
@@ -274,6 +280,9 @@ class Animation:
         elif self.__class__.__name__ == 'fill_betweenx':
             kwargs['x1'] = x1
             kwargs['x2'] = x2
+
+        data_x = to_np_array(data_x)
+        data_y = to_np_array(data_y)
         
         if self.function is not None:
             self.function(data_x,data_y,x,kwargs)
@@ -319,8 +328,8 @@ class Animation:
         return self.tweens([property],[start],[end],duration,delay,easing,persistent=persistent)
     
     def tweens(self,properties,starts,ends,duration,delay=0,easing=None,persistent=True):
-        starts = [np.ravel(start) for start in starts]
-        ends = [np.ravel(end) for end in ends]
+        starts = [to_np_array(start) for start in starts]
+        ends = [to_np_array(end) for end in ends]
         properties = self.get_main_alias(properties)
         properties,starts,ends = self.sanitize_colors(properties,starts,ends)
         
@@ -349,10 +358,10 @@ class Animation:
             _x = min(x,anim['duration'] + anim['delay'])
             if anim['easing'] is None:
                 anim['easing'] = self.easing
-            t = self.get_t_from_x(anim,x)
+            t = self.get_t_from_x(anim,_x)
             t = np.clip(t,0,1)
-            start = np.ravel(anim['start'])
-            end = np.ravel(anim['end'])
+            start = to_np_array(anim['start'])
+            end = to_np_array(anim['end'])
             current = start + (end - start)*t
             kwargs[anim['property']] = current
         return kwargs
@@ -418,7 +427,7 @@ class Animation:
             .translate(cx, cy)
         )
 
-        obj = np.ravel(self.obj)
+        obj = to_np_array(self.obj)
         for o in obj:
             if isinstance(o, mpl.collections.Collection) and self.mpl_obj_type == mpl.collections.Collection:
                 offsets = np.asarray(o.get_offsets(), dtype=float).reshape(-1, 2)
@@ -459,7 +468,7 @@ class Animation:
             .translate(cx, cy)
         )
         
-        obj = np.ravel(self.obj)
+        obj = to_np_array(self.obj)
         for o in obj:            
             if isinstance(o, mpl.collections.Collection) and self.mpl_obj_type == mpl.collections.Collection:
                 offsets = np.asarray(o.get_offsets(), dtype=float).reshape(-1, 2)
@@ -494,7 +503,7 @@ class Animation:
         pos_x = start[0] + (end[0] - start[0])*t
         pos_y = start[1] + (end[1] - start[1])*t
         self.T = self.T.translate(pos_x,pos_y)
-        obj = np.ravel(self.obj)
+        obj = to_np_array(self.obj)
         for o in obj:
             if self.mpl_obj_type == mpl.collections.Collection:
                 offsets = o.get_offsets()
@@ -507,8 +516,8 @@ class Animation:
         if isinstance(new_x,numbers.Number):
             new_x = [new_x]
             new_y = [new_y]
-        new_x = np.ravel(new_x)
-        new_y = np.ravel(new_y)
+        new_x = to_np_array(new_x)
+        new_y = to_np_array(new_y)
         
         self.anims.append({
             'name':'morph',
@@ -601,16 +610,16 @@ class Animation:
             
             t = self.get_t_from_x(anim,_x)
             if anim['name'] == 'scale':
-                start = np.ravel(anim['start'])
-                end = np.ravel(anim['end'])
+                start = to_np_array(anim['start'])
+                end = to_np_array(anim['end'])
                 self._scale(t,start,end,center=anim['center'])
             if anim['name'] == 'translate':
-                start = np.ravel(anim['start'])
-                end = np.ravel(anim['end'])
+                start = to_np_array(anim['start'])
+                end = to_np_array(anim['end'])
                 self._translate(t,start,end)
             if anim['name'] == 'rotate':
-                start = np.ravel(anim['start'])
-                end = np.ravel(anim['end'])
+                start = to_np_array(anim['start'])
+                end = to_np_array(anim['end'])
                 self._rotate(t,start,end,center=anim['center'])
 
     def get_center(self):
@@ -954,8 +963,8 @@ class fig_width_ratio(Animation):
     def __init__(self,start_widths,end_widths,duration,delay=0,easing=easings.easeLinear(),axis=None,*args,**kwargs):
         super().__init__(axis=axis,*args, **kwargs)
         self.grid = None
-        start_widths = np.ravel(start_widths).astype(float)
-        end_widths = np.ravel(end_widths).astype(float)
+        start_widths = to_np_array(start_widths).astype(float)
+        end_widths = to_np_array(end_widths).astype(float)
         start_widths = np.maximum(start_widths,1e-3)
         end_widths = np.maximum(end_widths,1e-3)
         #Normalize the ratios so scaling with time remains linear
@@ -991,7 +1000,7 @@ class fig_width_ratio(Animation):
         
         self.grid.set_width_ratios(widths)
 
-        axes = np.ravel(self.seq.fig.get_axes())
+        axes = to_np_array(self.seq.fig.get_axes())
         shape = self.seq.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
         axes = axes.reshape(shape)        
         for i in range(len(widths)):
@@ -1030,8 +1039,8 @@ class fig_height_ratio(Animation):
     def __init__(self,start_heights,end_heights,duration,delay=0,easing=easings.easeLinear(),axis=None,*args,**kwargs):
         super().__init__(axis=axis,*args, **kwargs)
         self.grid = None
-        start_heights = np.ravel(start_heights)
-        end_heights = np.ravel(end_heights)
+        start_heights = to_np_array(start_heights)
+        end_heights = to_np_array(end_heights)
         start_heights = np.maximum(start_heights,1e-3)
         end_heights = np.maximum(end_heights,1e-3)
         #Normalize the ratios so scaling with time remains linear
@@ -1067,7 +1076,7 @@ class fig_height_ratio(Animation):
         
         self.grid.set_height_ratios(heights)
 
-        axes = np.ravel(self.seq.fig.get_axes())
+        axes = to_np_array(self.seq.fig.get_axes())
         shape = self.seq.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
         axes = axes.reshape(shape)
         for i in range(len(heights)):
@@ -1288,8 +1297,8 @@ class scatter(Animation):
         self.mpl_plot_type = plt.plot
         super().__init__(easing=easing,axis=axis,*args, **kwargs)
 
-        self.x = np.ravel(x)
-        self.y = np.ravel(y)
+        self.x = to_np_array(x)
+        self.y = to_np_array(y)
         if self.x.size != self.y.size:
             raise ValueError("x and y must be the same size")
     
@@ -1304,7 +1313,7 @@ class scatter(Animation):
         if 'c' in kwargs and 'color' in kwargs:
             kwargs.pop('color')
         if 'c' in kwargs:
-            c = np.ravel(kwargs['c'])
+            c = to_np_array(kwargs['c'])
             if c.ndim == 1 and (len(c) == 3 or len(c) == 4) and len(c) != len(data_x) and (c <= 1).all():
                 kwargs['c'] = c.reshape(1,-1)
         self.obj = self.axis.scatter(data_x,data_y,**kwargs)
@@ -1615,15 +1624,14 @@ class plot(Animation):
         self.mpl_plot_type = plt.plot
         super().__init__(easing=easing,axis=axis,*args, **kwargs)
 
-        self.x = np.ravel(x)
-        self.y = np.ravel(y)
+        self.x = to_np_array(x)
+        self.y = to_np_array(y)
         if self.x.size != self.y.size:
             raise ValueError("x and y must be the same size")
 
     def function(self,data_x,data_y,x,kwargs):
         if isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
-        
         self.obj = self.axis.plot(data_x,data_y,**kwargs)
 
 class step(Animation):
@@ -1695,8 +1703,8 @@ class step(Animation):
         self.mpl_plot_type = plt.plot
         super().__init__(*args, **kwargs)
 
-        self.x = np.ravel(x)
-        self.y = np.ravel(y)
+        self.x = to_np_array(x)
+        self.y = to_np_array(y)
         if self.x.size != self.y.size:
             raise ValueError("x and y must be the same size")
 
@@ -1855,10 +1863,10 @@ class fill_between(Animation):
         self.mpl_obj_type = mpl.collections.FillBetweenPolyCollection
         self.mpl_plot_type = plt.fill_between
         super().__init__(*args, **kwargs)
-        self.x = np.ravel(x)
-        self.y = np.ravel(x)
-        self.y1 = np.ravel(y1)
-        self.y2 = np.ravel(y2)
+        self.x = to_np_array(x)
+        self.y = to_np_array(x)
+        self.y1 = to_np_array(y1).reshape(-1)
+        self.y2 = to_np_array(y2).reshape(-1)
         if self.y1.size != self.x.size:
             self.y1 = np.ones_like(self.x)*self.y1[0]
         if self.y2.size != self.x.size:
@@ -2023,10 +2031,10 @@ class fill_betweenx(Animation):
         self.mpl_obj_type = mpl.collections.FillBetweenPolyCollection
         self.mpl_plot_type = plt.fill_betweenx
         super().__init__(*args, **kwargs)
-        self.x = np.ravel(y)
-        self.y = np.array(y)
-        self.x1 = np.array(x1).reshape(-1)
-        self.x2 = np.array(x2).reshape(-1)
+        self.x = to_np_array(y)
+        self.y = to_np_array(y)
+        self.x1 = to_np_array(x1).reshape(-1)
+        self.x2 = to_np_array(x2).reshape(-1)
         if self.x1.size != self.y.size:
             self.x1 = np.ones_like(self.y)*self.x1[0]
         if self.x2.size != self.y.size:
@@ -2177,6 +2185,7 @@ class axvline(Animation):
             kwargs['ymax'] = kwargs['ymax'][0]
         if 'ymin' in kwargs:
             kwargs['ymin'] = kwargs['ymin'][0]
+
         if len(data_x) > 0:
             self.obj = [self.axis.axvline(data_x,**kwargs)]
 
@@ -2714,7 +2723,7 @@ class hist(Animation):
         self.mpl_obj_type = mpl.patches.Rectangle
         self.mpl_plot_type = plt.hist
         super().__init__(*args, **kwargs)
-        self.x = np.ravel(x)
+        self.x = to_np_array(x)
         self.y = np.zeros_like(self.x)
 
     def clean(self,x,clear_anims=True):
@@ -2746,7 +2755,7 @@ class hist(Animation):
             kwargs['alpha'] = kwargs['alpha'][0]
         
         if 'bins' in kwargs:
-            kwargs['bins'] = np.ravel(kwargs['bins'])
+            kwargs['bins'] = to_np_array(kwargs['bins'])
 
         if 'bins' in kwargs and len(kwargs['bins']) == 1:
             kwargs['bins'] = int(kwargs['bins'][0])
@@ -2887,15 +2896,15 @@ class hist2d(Animation):
         self.mpl_obj_type = mpl.collections.QuadMesh
         self.mpl_plot_type = plt.hist2d
         super().__init__(*args, **kwargs)
-        self.x = np.ravel(x)
-        self.y = np.ravel(y)
+        self.x = to_np_array(x)
+        self.y = to_np_array(y)
     
     def function(self,data_x,data_y,x,kwargs):
         if isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
         
         if 'bins' in kwargs:
-            kwargs['bins'] = np.ravel(kwargs['bins'])
+            kwargs['bins'] = to_np_array(kwargs['bins'])
 
         if 'bins' in kwargs and len(kwargs['bins']) == 1:
             kwargs['bins'] = int(kwargs['bins'][0])
@@ -3212,6 +3221,8 @@ class contourf(Animation):
             self._x = range(z.shape[0])
         if self._y is None:
             self._y = range(z.shape[1])
+        self._x = np.array(self._x)
+        self._y = np.array(self._y)
         self.init_shape = z.shape
 
     def morph(self,new_z,duration,delay=0,easing=None,persistent=True,**kwargs):
@@ -3233,7 +3244,7 @@ class contourf(Animation):
             kwargs['alpha'] = kwargs['alpha'][0]
         
         if 'bins' in kwargs:
-            kwargs['bins'] = np.ravel(kwargs['bins'])
+            kwargs['bins'] = to_np_array(kwargs['bins'])
 
         if 'bins' in kwargs and len(kwargs['bins']) == 1:
             kwargs['bins'] = int(kwargs['bins'][0])

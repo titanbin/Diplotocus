@@ -1,5 +1,7 @@
 __pycache__/
 *.mov
+*.mp4
+*.ai
 GUI_web/.DS_Store
 .DS_Store
 diplotocus-docs/.DS_Store
