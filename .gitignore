@@ -6,3 +6,10 @@ GUI_web/.DS_Store
 .DS_Store
 diplotocus-docs/.DS_Store
 diplotocus-docs/Unnamed/
+tests
+.vscode
+Unnamed
+benchmark
+diplotocus.egg-info
+generate_doc_api.py
+dist
