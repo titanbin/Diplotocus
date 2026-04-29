@@ -207,9 +207,15 @@ class Sequence:
         self.x = x_max
 
     def wait(self,duration):
-        old_x = self.x
-        for i in range(duration):
-            self.sequence_str += 'file \'' + self.name + '_{}.png\'\n'.format(old_x - 1)
+        if self.x == 0:
+            raise UserWarning('No rendered frames, run animate with animations to generate frames !')
+
+        last_frame = self.x - 1
+        source_png = self.name + '/' + self.name + '_{}.png'.format(last_frame)
+        for _ in range(duration):
+            target_png = self.name + '/' + self.name + '_{}.png'.format(self.x)
+            shutil.copyfile(source_png, target_png)
+            self.sequence_str += 'file \' ' + self.name + '_{}.png\'\n'.format(self.x)
             self.sequence_str += 'duration {}\n'.format(1/30)
             self.x += 1
 
