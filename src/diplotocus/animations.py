@@ -696,7 +696,6 @@ class axis_zoom(Animation):
         >>> axis_zoom(zoom=2,duration=100)
     """
     def __init__(self,zoom,duration,delay=0,easing=None,axis=None,*args,**kwargs):
-        zoom = 1/zoom
         super().__init__(axis=axis,*args, **kwargs)
         self.anims = [{
             'name':'axis_move',
@@ -713,8 +712,8 @@ class axis_zoom(Animation):
         if 'start_width' not in self.anims[0]:
             self.anims[0]['start_width'] = self.axis.get_xlim()[1] - self.axis.get_xlim()[0]
             self.anims[0]['start_height'] = self.axis.get_ylim()[1] - self.axis.get_ylim()[0]
-            self.anims[0]['end_width'] = self.anims[0]['start_width']*self.anims[0]['zoom']
-            self.anims[0]['end_height'] = self.anims[0]['start_height']*self.anims[0]['zoom']
+            self.anims[0]['end_width'] = self.anims[0]['start_width']/self.anims[0]['zoom']
+            self.anims[0]['end_height'] = self.anims[0]['start_height']/self.anims[0]['zoom']
 
     def function(self,data_x,data_y,x,kwargs):
         anim = self.anims[0]

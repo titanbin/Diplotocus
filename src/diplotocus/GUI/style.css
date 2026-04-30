@@ -2,11 +2,56 @@
 	box-sizing: border-box;
 }
 
+html {
+  color-scheme: dark;
+}
+
 body {
 	margin: 0;
 	font-family: Arial, sans-serif;
-	background: #323232;
+	background-color: #323232;
 	color: #e4e4e4;
+	position: relative;
+	min-height: 100vh;
+	overflow-x: hidden;
+}
+
+.body-bg{
+	background-image: url('src/bg.png');
+	background-size: 100px;
+	position: fixed;
+	inset: 0;
+	margin: 0 auto;
+	backdrop-filter: blur(100px);
+	z-index: 2;
+	pointer-events: none;
+}
+
+.app-shell{
+	position: relative;
+	z-index: 3;
+}
+
+.workspace {
+	display: grid;
+	grid-template-columns: 100px 1fr 100px;
+	gap: 10px;
+	background-color: rgba(0, 0, 0,.5);
+}
+
+.circle{
+	width:300px;
+	height: 300px;
+	position: fixed;
+	transition: background-color 0.5s ease, opacity 0.5s ease;
+	top: 0;
+	left: 0;
+	background-color: gray;
+	opacity: .1;
+	border-radius: 1000px;
+	transform: translate(-50%,-50%);
+	z-index: 1;
+	pointer-events: none;
 }
 
 .topbar {
@@ -132,13 +177,6 @@ button:hover{
 	opacity: 0;
 }
 
-.workspace {
-	display: grid;
-	grid-template-columns: 100px 1fr 100px;
-	gap: 10px;
-	background-color: #171717;
-}
-
 .palette {
 	padding: 3px;
 }
@@ -178,7 +216,7 @@ button:hover{
 	position: relative;
 	z-index: 100;
 	margin-right: 5px;
-	background: #171717;
+	background: rgba(23, 23, 23,.5);
 }
 
 .track-control {
@@ -308,7 +346,7 @@ button:hover{
 	position: relative;
 	height: 52px;
 	margin-bottom: 2px;
-	background: #2b2b2b;
+	background: rgba(255, 255, 255, 0.03);
 	font-style: italic;
 	width: 100%;
 	min-width: var(--timeline-width, 1000px);

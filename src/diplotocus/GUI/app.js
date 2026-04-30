@@ -37,6 +37,8 @@
     statusFadeTimer: null,
   };
 
+  let resetCircleHoverState = function () {};
+
   const DIALOG_FIELD_DEFS = {
     start_x: { wrap: "#dlgStartXWrap", input: "#dlgStartX", defaultValue: "", read: () => Number($("#dlgStartX").val() || 0) },
     start_y: { wrap: "#dlgStartYWrap", input: "#dlgStartY", defaultValue: "", read: () => Number($("#dlgStartY").val() || 0) },
@@ -457,7 +459,8 @@
       if ($row.length === 0) {
         return;
       }
-      var clipHTML = clip.type;
+      var clipType = clip.type.replace('_',' ');
+      var clipHTML = clipType;
       if (clip.plotObjectName != "None"){
         clipHTML += '<br/><span>' + clip.plotObjectName + '</span>';
       }
@@ -1552,6 +1555,82 @@
     });
   }
 
+  function initCircleInteraction() {
+    const $circle = $(".circle");
+    if ($circle.length === 0) {
+      return;
+    }
+
+    const defaultColor = "gray";
+    const defaultOpacity = 0.1;
+
+    const circle = {
+      currentX: 0,
+      currentY: 0,
+      targetX: 0,
+      targetY: 0,
+      easing: 0.22,
+      animationFrame: null,
+      
+      init() {
+        $(document).on("mousemove", (e) => {
+          this.targetX = e.clientX;
+          this.targetY = e.clientY;
+          this.updateStateFromPosition(e);
+        });
+        this.animate();
+      },
+      
+      animate() {
+        this.currentX += (this.targetX - this.currentX) * this.easing;
+        this.currentY += (this.targetY - this.currentY) * this.easing;
+        
+        $circle.css({
+          left: Math.round(this.currentX) + "px",
+          top: Math.round(this.currentY) + "px"
+        });
+        
+        this.animationFrame = requestAnimationFrame(() => this.animate());
+      },
+      
+      updateStateFromPosition(e) {
+        const elementAtMouse = document.elementFromPoint(e.clientX, e.clientY);
+        
+        if (!elementAtMouse) {
+          this.setDefaultState();
+          return;
+        }
+        
+        const $clipOrPalette = $(elementAtMouse).closest(".clip, .palette-item");
+        if ($clipOrPalette.length > 0) {
+          const color = window.getComputedStyle($clipOrPalette[0]).backgroundColor;
+          $circle.css("background-color", color);
+          $circle.css("opacity", 0.25);
+          return;
+        }
+        
+        const $button = $(elementAtMouse).closest(".timeline-controls button");
+        if ($button.length > 0) {
+          $circle.css("opacity", 0.25);
+          return;
+        }
+        
+        this.setDefaultState();
+      },
+      
+      setDefaultState() {
+        $circle.css("background-color", defaultColor);
+        $circle.css("opacity", defaultOpacity);
+      }
+    };
+    
+    resetCircleHoverState = function () {
+      circle.setDefaultState();
+    };
+    
+    circle.init();
+  }
+
   $(function () {
     setPreviewHeight(state.previewHeight);
     $("#previewImage").attr("src", "src/logo_bg.png");
@@ -1560,6 +1639,7 @@
     setLoopButtonState();
     setSaveButtonState();
     setSpeedButtonState();
+    initCircleInteraction();
     loadState().then(() => {
     });
   });

@@ -202,7 +202,15 @@ class GUI:
 
     def _build_special_animation(self, clip_type, duration, delay, easing, axis):
         if clip_type == "axis_zoom":
-            return animations.axis_zoom(zoom=1.0, duration=duration, delay=delay, easing=easing, axis=axis)
+            anim = animations.axis_zoom(zoom=1.0, duration=duration, delay=delay, easing=easing, axis=axis)
+            if anim.anims:
+                if axis is not None:
+                    anim.anims[0]["_initial_xlim"] = axis.get_xlim()
+                    anim.anims[0]["_initial_ylim"] = axis.get_ylim()
+                else:
+                    anim.anims[0]["_initial_xlim"] = (0.0, 1.0)
+                    anim.anims[0]["_initial_ylim"] = (0.0, 1.0)
+            return anim
 
         if clip_type == "axis_limits":
             xlim = axis.get_xlim() if axis is not None else (0.0, 1.0)
@@ -537,6 +545,10 @@ class GUI:
         if name in {"translate", "axis_move"}:
             start = anim.get("start", (0, 0))
             end = anim.get("end", (1, 1))
+            if start is None:
+                start = (0, 0)
+            if end is None:
+                end = (1, 1)
             props.update({
                 "start_x": float(start[0]),
                 "start_y": float(start[1]),
@@ -678,10 +690,16 @@ class GUI:
 
         name = clip_type
         if name in {"translate", "axis_move"}:
-            start_x = float(payload.get("start_x", anim.get("start", (0, 0))[0]))
-            start_y = float(payload.get("start_y", anim.get("start", (0, 0))[1]))
-            end_x = float(payload.get("end_x", anim.get("end", (1, 1))[0]))
-            end_y = float(payload.get("end_y", anim.get("end", (1, 1))[1]))
+            current_start = anim.get("start", (0, 0))
+            current_end = anim.get("end", (1, 1))
+            if current_start is None:
+                current_start = (0, 0)
+            if current_end is None:
+                current_end = (1, 1)
+            start_x = float(payload.get("start_x", current_start[0]))
+            start_y = float(payload.get("start_y", current_start[1]))
+            end_x = float(payload.get("end_x", current_end[0]))
+            end_y = float(payload.get("end_y", current_end[1]))
             anim["start"] = (start_x, start_y)
             anim["end"] = (end_x, end_y)
         elif name == "scale":
@@ -694,6 +712,15 @@ class GUI:
             anim["center"] = _parse_optional_center(payload)
         elif name == "axis_zoom":
             anim["zoom"] = _safe_float(payload.get("zoom", anim.get("zoom", 1.0)), 1.0)
+            initial_xlim = anim.get("_initial_xlim", (0.0, 1.0))
+            initial_ylim = anim.get("_initial_ylim", (0.0, 1.0))
+            start_width = initial_xlim[1] - initial_xlim[0]
+            start_height = initial_ylim[1] - initial_ylim[0]
+            zoom = anim.get("zoom", 1.0)
+            anim["start_width"] = start_width
+            anim["start_height"] = start_height
+            anim["end_width"] = start_width / zoom
+            anim["end_height"] = start_height / zoom
         elif name == "axis_limits":
             current_xlim = anim.get("xlim")
             current_ylim = anim.get("ylim")
