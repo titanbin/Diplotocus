@@ -18,6 +18,7 @@ readme = "diplotocus/readme.md"
 classifiers = [
   'Intended Audience :: Science/Research',
   'Operating System :: OS Independent',
+  'Framework :: Matplotlib',
   'Programming Language :: Python :: 3'
 ]
 license = "MIT"

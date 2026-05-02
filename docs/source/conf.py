@@ -39,6 +39,7 @@ html_static_path = ["_static"]
 html_theme_options = {
     "sidebar_hide_name": True,
 }
+pygments_style = "manni"
 
 # Force site logo and light mode; include assets that force light theme and hide the
 # theme switcher so the site remains white-only.

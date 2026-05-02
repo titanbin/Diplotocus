@@ -6,8 +6,10 @@ from copy import deepcopy
 matplotlib.use("Agg")
 import shutil
 try:
+    has_ipython = True
     from IPython.display import HTML, display
 except:
+    has_ipython = False
     pass
 
 from .easings import *
@@ -273,13 +275,14 @@ class Sequence:
             update()
         
         rand_id = np.random.randint(0,10_000)
-        if is_gif:
-            return display(HTML('<img src="{}?randId={}" style="max-width:640px;height:auto;" />'.format(video_fn,rand_id)))
-        return display(HTML("""
-            <video width="640" height="360" autoplay loop muted playsinline>
-            <source src="{}?randId={}" type="video/mp4">
-            </video>
-        """.format(video_fn,rand_id)))
+        if has_ipython:
+            if is_gif:
+                return display(HTML('<img src="{}?randId={}" style="max-width:640px;height:auto;" />'.format(video_fn,rand_id)))
+            return display(HTML("""
+                <video width="640" height="360" autoplay loop muted playsinline>
+                <source src="{}?randId={}" type="video/mp4">
+                </video>
+            """.format(video_fn,rand_id)))
     
     def save_project(self,path):
         with open(path, 'wb') as f:
