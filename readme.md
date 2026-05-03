@@ -2,7 +2,7 @@
   <img width="300" src="https://github.com/titanbin/Diplotocus/blob/main/logo.png?raw=true" />
 </p>
 
-[![Documentation](https://img.shields.io/badge/docs-passing-success)](https://diplotocus.readthedocs.io) [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/titanbin/Diplotocus/blob/main/LICENSEE) [![License](https://img.shields.io/pypi/v/diplotocus?color=blue)](https://pypi.org/project/diplotocus/)
+[![Documentation](https://img.shields.io/badge/docs-passing-success)](https://diplotocus.readthedocs.io) [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/titanbin/Diplotocus/blob/main/LICENSE) [![License](https://img.shields.io/pypi/v/diplotocus?color=blue)](https://pypi.org/project/diplotocus/)
 
 **Diplotocus** is a python package designed to render animations of matplotlib objects, in a *timeline* style.
 
