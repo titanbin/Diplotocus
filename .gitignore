@@ -3,8 +3,6 @@ __pycache__/
 *.ai
 GUI_web/.DS_Store
 .DS_Store
-diplotocus-docs/.DS_Store
-diplotocus-docs/Unnamed/
 tests
 .vscode
 Unnamed
@@ -14,3 +12,4 @@ generate_doc_api.py
 dist
 src/diplotocus/INFO
 INFO
+docs/build

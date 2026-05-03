@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools >= 77.0.3"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "diplotocus"
-version = "0.0.5"
+dynamic = ["version"]
 dependencies = [
   "numpy",
   "matplotlib",
@@ -14,7 +14,7 @@ authors = [
   { name="Tristan Boin", email="tristan.boin@obspm.fr" },
 ]
 description = "A python package to generate animations of matplotlib objects."
-readme = "diplotocus/readme.md"
+readme = "readme.md"
 classifiers = [
   'Intended Audience :: Science/Research',
   'Operating System :: OS Independent',
@@ -23,6 +23,9 @@ classifiers = [
 ]
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "diplotocus._version.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]

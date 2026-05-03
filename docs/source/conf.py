@@ -7,6 +7,7 @@ import os
 import sys
 import inspect
 import diplotocus
+from diplotocus._version import __version__
 sys.path.insert(0, os.path.abspath("../../src"))
 
 # -- Project information -----------------------------------------------------
@@ -15,7 +16,8 @@ sys.path.insert(0, os.path.abspath("../../src"))
 project = 'diplotocus'
 copyright = '2026, Tristan Boin'
 author = 'Tristan Boin'
-release = '2026'
+release = __version__
+version = __version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
