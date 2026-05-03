@@ -32,16 +32,12 @@ def to_np_array(obj):
         obj = np.ravel(obj)
     return obj
 
-class Animation:
+class plotObject:
     """
-    A parent Animation object for all plotting objects.
+    A parent plotObject object for all plotting objects.
 
     Parameters
     ----------
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
     easing : callable, optional
         Easing function
     axis : matplotlib.axes.Axes, optional
@@ -839,7 +835,7 @@ class Animation:
             cy = 0.5 * (bbox.y0 + bbox.y1)
         return (cx,cy)
 
-class axis_zoom(Animation):
+class axis_zoom(plotObject):
     """
     Zooms into the axis given a zoom value.
 
@@ -891,7 +887,7 @@ class axis_zoom(Animation):
         self.axis.set_xlim(x_range[0],x_range[1])
         self.axis.set_ylim(y_range[0],y_range[1])
 
-class axis_limits(Animation):
+class axis_limits(plotObject):
     """
     Reframe axis to the given limits (on the x-axis, y-axis or both depending on passed arguments)
 
@@ -947,7 +943,7 @@ class axis_limits(Animation):
             ylim_top    = anim['start_ylim'][1] + (anim['ylim'][1] - anim['start_ylim'][1])*t
             self.axis.set_ylim(ylim_bottom,ylim_top)
 
-class axis_move(Animation):
+class axis_move(plotObject):
     """
     Move the center of the axis to a given position.
 
@@ -998,7 +994,7 @@ class axis_move(Animation):
         self.axis.set_xlim(pos_x-width/2,pos_x+width/2)
         self.axis.set_ylim(pos_y-height/2,pos_y+height/2)
 
-class axis_alpha(Animation):
+class axis_alpha(plotObject):
     """
     Change the opacity of the axis.
 
@@ -1079,7 +1075,7 @@ class axis_alpha(Animation):
                 for txt in leg.get_texts():
                     txt.set_alpha(alpha)
 
-class fig_width_ratio(Animation):
+class fig_width_ratio(plotObject):
     """
     Resize subplots' widths.
 
@@ -1150,7 +1146,7 @@ class fig_width_ratio(Animation):
                     if row[i].axison == False:
                         row[i].set_axis_on()
 
-class fig_height_ratio(Animation):
+class fig_height_ratio(plotObject):
     """
     Resize subplots' heights.
 
@@ -1221,7 +1217,7 @@ class fig_height_ratio(Animation):
                     if column[i].axison == False:
                         column[i].set_axis_on()
 
-class scatter(Animation):
+class scatter(plotObject):
     """
     A scatter plot of *y* vs. *x* with varying marker size and/or color.
 
@@ -1451,7 +1447,7 @@ class scatter(Animation):
                 kwargs['c'] = c.reshape(1,-1)
         self.obj = self.axis.scatter(data_x,data_y,**kwargs)
 
-class plot(Animation):
+class plot(plotObject):
     """
     Plot y versus x as lines and/or markers.
 
@@ -1767,7 +1763,7 @@ class plot(Animation):
             kwargs['alpha'] = kwargs['alpha'][0]
         self.obj = self.axis.plot(data_x,data_y,**kwargs)
 
-class step(Animation):
+class step(plotObject):
     """
     Make a step plot.
 
@@ -1847,7 +1843,7 @@ class step(Animation):
         
         self.obj = self.axis.step(data_x,data_y,**kwargs)
 
-class fill_between(Animation):
+class fill_between(plotObject):
     """
     Fill the area between two horizontal curves.
 
@@ -2015,7 +2011,7 @@ class fill_between(Animation):
     def function(self,data_x,data_y,x,kwargs):
         self.obj = self.axis.fill_between(x=data_x,**kwargs)
 
-class fill_betweenx(Animation):
+class fill_betweenx(plotObject):
     """
     Fill the area between two vertical curves.
 
@@ -2183,7 +2179,7 @@ class fill_betweenx(Animation):
     def function(self,data_x,data_y,x,kwargs):
         self.obj = self.axis.fill_betweenx(y=data_x,**kwargs)
     
-class axvline(Animation):
+class axvline(plotObject):
     """
     Add a vertical line spanning the whole or fraction of the Axes.
 
@@ -2322,7 +2318,7 @@ class axvline(Animation):
         if len(data_x) > 0:
             self.obj = [self.axis.axvline(data_x,**kwargs)]
 
-class axhline(Animation):
+class axhline(plotObject):
     """
     Add a horizontal line spanning the whole or fraction of the Axes.
 
@@ -2400,7 +2396,7 @@ class axhline(Animation):
         if len(data_x) > 0:
             self.obj = [self.axis.axhline(data_x,**kwargs)]
 
-class errorbar(Animation):
+class errorbar(plotObject):
     """
     Plot y versus x as lines and/or markers with attached errorbars.
 
@@ -2637,7 +2633,7 @@ class errorbar(Animation):
         obj = [obj.lines[0]] + list(obj.lines[1]) + list(obj.lines[2])
         self.obj = obj
 
-class hist(Animation):
+class hist(plotObject):
     """
     Compute and plot a histogram.
 
@@ -2892,7 +2888,7 @@ class hist(Animation):
         
         h,edges,self.obj = self.axis.hist(data_x,**kwargs)
 
-class hist2d(Animation):
+class hist2d(plotObject):
     """
     Make a 2D histogram plot.
 
@@ -3049,7 +3045,7 @@ class hist2d(Animation):
         self.axis.set_xlim(old_xlim)
         self.axis.set_ylim(old_ylim)
 
-class contourf(Animation):
+class contourf(plotObject):
     """
     Plot filled contours.
 
@@ -3398,7 +3394,7 @@ class contourf(Animation):
         self.axis.set_xlim(old_xlim)
         self.axis.set_ylim(old_ylim)
 
-class text(Animation):
+class text(plotObject):
     """
     Add text to the Axes.
 
@@ -3577,7 +3573,7 @@ class text(Animation):
         self.path = patch.get_path()
         self.obj = patch
 
-class svg(Animation):
+class svg(plotObject):
     """A vector SVG object.
 
     Parameters

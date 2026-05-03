@@ -59,11 +59,22 @@ def status_message(start_msg, end_msg):
 #----------------------------------------------
 
 def load_project(path):
+    """Load a project.
+
+    Parameters
+    ----------
+    path : str
+        the path to the project file.
+
+    Returns
+    ----------
+    (Timeline,list of plot objects)
+    """
     tl = pickle.load(open(path, 'rb'))
-    animations = tl.animations
+    plot_objects = tl.plot_objects
     tl.x = 0
     tl.clean_all()
-    return tl,animations
+    return tl,plot_objects
 
 class Timeline:
     """Create and manage an animation timeline.
@@ -117,11 +128,11 @@ class Timeline:
             self.ax = np.array(self.ax)
         if isinstance(self.ax,np.ndarray):
             if isinstance(self.ax[0],np.ndarray):
-                self.main_axis = self.ax[0,0]
+                self.set_main_axis(self.ax[0,0])
             else:
-                self.main_axis = self.ax[0]
+                self.set_main_axis(self.ax[0])
         else:
-            self.main_axis = self.ax
+            self.set_main_axis(self.ax)
         if xlim is not None:
             self.main_axis.set_xlim(*xlim)
         if ylim is not None:
@@ -133,7 +144,7 @@ class Timeline:
         self.x = 0
         self.timeline_str = ''
         self.transparent = transparent
-        self.animations = []
+        self.plot_objects = []
         if in_notebook() == False:
             namespace = sys._getframe(1).f_globals['__file__']
             self.full_path = '/'.join(namespace.split('/')[:-1])
@@ -142,7 +153,24 @@ class Timeline:
         if noaxis:
             self.main_axis.set_axis_off()
 
+    def set_main_axis(self,ax):
+        """Set the default axis to plot objects on
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, optional
+            Axis to set as default
+        """
+        self.main_axis = ax
+
     def set_axis_color(self,color):
+        """Set the color of axes
+
+        Parameters
+        ----------
+        color : color or array-like, optional
+            The color to set the axes
+        """
         if isinstance(self.ax,np.ndarray) == False:
             axes = (self.ax,)
         else:
@@ -175,24 +203,24 @@ class Timeline:
                     if p.get_animated():
                         p.remove()
 
-    def plot(self,animations,x=0,easing=None,debug=False):
-        if isinstance(animations,Animation):
-            animations = (animations,)
+    def plot(self,plot_objects,x=0,easing=None,debug=False):
+        if isinstance(plot_objects,plotObject):
+            plot_objects = (plot_objects,)
 
-        for animation in animations:
-            if animation.obj is not None and ((animation.x_min <= x < animation.x_max) or (x >= animation.x_max and animation.persistent == False)):
-                objects = np.ravel(animation.obj)
+        for plot_object in plot_objects:
+            if plot_object.obj is not None and ((plot_object.x_min <= x < plot_object.x_max) or (x >= plot_object.x_max and plot_object.persistent == False)):
+                objects = np.ravel(plot_object.obj)
                 for obj in objects:
                     try:
                         obj.remove()
                     except:
                         pass
             
-            animation.initialize(self)
+            plot_object.initialize(self)
             #only plot if within an anim or if last one is persistent
             last_anim = None
             closest_dist = np.inf
-            for anim in animation.anims:
+            for anim in plot_object.anims:
                 anim_x_max = anim['duration']+anim['delay']
                 if anim_x_max > x:
                     continue
@@ -204,19 +232,19 @@ class Timeline:
             if last_anim is not None:
                 is_within_anim = last_anim['persistent'] == True
             if is_within_anim == False:
-                for anim in animation.anims:
+                for anim in plot_object.anims:
                     anim_x_min = anim['delay']
                     anim_x_max = anim['duration']+anim['delay']
                     if anim_x_min <= x < anim_x_max:
                         is_within_anim = True
                         break
             if is_within_anim:
-                animation.apply(x,easing)
+                plot_object.apply(x,easing)
         prev_x = self.x
         self.x = x
         self.save_plot(debug)
-        for animation in animations:
-            animation.clean(x,clear_anims=False)
+        for plot_object in plot_objects:
+            plot_object.clean(x,clear_anims=False)
         self.x = prev_x
 
     def animate(self,plot_objects,easing=None,debug=False):
@@ -224,14 +252,14 @@ class Timeline:
 
         Parameters
         ----------
-        plot_objects : Animation or sequence of Animation
+        plot_objects : plotObject or sequence of plotObject
             a single plot object (e.g. `scatter`, `plot`, `hist`...) or a list of plot objects.
         easing : easing
             an easing override used while rendering.
         debug : bool
             if True, skip writing frame images to disk.
         """
-        if isinstance(plot_objects,Animation):
+        if isinstance(plot_objects,plotObject):
             plot_objects = (plot_objects,)
         self.animations = deepcopy(np.array(plot_objects))
         
@@ -250,7 +278,7 @@ class Timeline:
             loop = tqdm(loop)
 
         for x in loop:
-            self.plot(animations=plot_objects,x=x,easing=easing,debug=debug)
+            self.plot(plot_objects=plot_objects,x=x,easing=easing,debug=debug)
         for animation in plot_objects:
             for anim in animation.anims:
                 anim['played'] = True
@@ -354,5 +382,12 @@ class Timeline:
             """.format(video_fn,rand_id)))
     
     def save_project(self,path):
+        """Save the current Timeline and associated plot objects to a project file.
+
+        Parameters
+        ----------
+        path : str
+            The path to save the project file to.
+        """
         with open(path, 'wb') as f:
             pickle.dump(self, f)
