@@ -29,9 +29,17 @@ def in_notebook():
         return False
 
 if in_notebook():
-    from tqdm.notebook import tqdm
+    try:
+        from tqdm.notebook import tqdm
+        has_tqdm = True
+    except:
+        has_tqdm = False
 else:
-    from tqdm import tqdm
+    try:
+        from tqdm import tqdm
+        has_tqdm = True
+    except:
+        has_tqdm = False
 
 def status_message(start_msg, end_msg):
     if in_notebook():
@@ -238,7 +246,7 @@ class Timeline:
                 x_max = animation.x_max
         
         loop = range(self.x,x_max)
-        if not self.quiet:
+        if not self.quiet and has_tqdm:
             loop = tqdm(loop)
 
         for x in loop:
