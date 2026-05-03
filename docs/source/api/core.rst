@@ -15,7 +15,7 @@ Animations
 Base
 ~~~~
 
-.. autoclass:: diplotocus.animations.plotObjects
+.. autoclass:: diplotocus.animations.plotObject
    :members:
    :undoc-members:
    :show-inheritance:

@@ -78,6 +78,7 @@ Get started by :doc:`Installing Diplotocus <notebooks/installation>`, and follow
    notebooks/plot_objects
    notebooks/animations
    notebooks/easings
+   notebooks/projects
    notebooks/GUI
 
 .. toctree::
