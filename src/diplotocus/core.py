@@ -283,6 +283,9 @@ class Timeline:
             for anim in animation.anims:
                 anim['played'] = True
         self.x = x_max
+        for animation in plot_objects:
+            if self.x >= animation.x_max and animation.persistent == False:
+                animation.clean(animation.x_max - 2, clear_anims=False)
 
     def wait(self,duration):
         """Pause the animation for a number of frames.

@@ -328,6 +328,29 @@ class plotObject:
                 ends[i] = list(mpl.colors.to_rgba_array(ends[i])[0])
         return properties,starts,ends
 
+    def plot(self,duration,delay=0,easing=None,persistent=True):
+        """Plot the plot object as-is without animation.
+
+        Parameters
+        ----------
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        """
+        self.anims.append({
+            'name':'plot',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'persistent':persistent,
+            'played':False
+        })
+        self.compute_timings()
+        return self
+
     def tween(self,property,start,end,duration,delay=0,easing=None,persistent=True):
         """Animate a change in a property of the plot object.
 
