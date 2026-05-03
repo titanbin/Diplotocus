@@ -855,11 +855,6 @@ class axis_zoom(Animation):
         Easing function
     axis : matplotlib.axes.Axes, optional
         Axis to plot on
-
-    Example
-    --------
-    Zoom 2 times in 100 frames:
-        >>> axis_zoom(zoom=2,duration=100)
     """
     def __init__(self,zoom,duration,delay=0,easing=None,axis=None,*args,**kwargs):
         super().__init__(axis=axis,*args, **kwargs)
@@ -914,11 +909,6 @@ class axis_limits(Animation):
         Easing function
     axis : matplotlib.axes.Axes, optional
         Axis to plot on
-
-    Example
-    --------
-    Reframe x-axis to limits [0-2] in 100 frames:
-        >>> axis_limits(xlim=(0,2),duration=100)
     """
     def __init__(self,duration,xlim=None,ylim=None,delay=0,easing=None,axis=None,*args,**kwargs):
         if xlim is None and ylim is None:
@@ -973,11 +963,6 @@ class axis_move(Animation):
         Easing function
     axis : matplotlib.axes.Axes, optional
         Axis to plot on
-
-    Example
-    --------
-    Recenter the axis to (-1,-1) in 100 frames:
-        >>> axis_move(pos=(-1,-1),duration=100)
     """
     def __init__(self,end_pos,duration,start_pos=None,delay=0,easing=None,axis=None,*args,**kwargs):
         super().__init__(axis=axis,*args, **kwargs)
@@ -1031,11 +1016,6 @@ class axis_alpha(Animation):
         Easing function
     axis : matplotlib.axes.Axes, optional
         Axis to plot on
-
-    Example
-    --------
-    Make the axis appear in 100 frames
-        >>> axis_alpha(start_alpha=0,end_alpha=1,duration=100)
     """
     def __init__(self,start_alpha,end_alpha,duration,delay=0,alpha_objs=True,easing=None,axis=None,*args,**kwargs):
         super().__init__(axis=axis,*args, **kwargs)
@@ -1117,11 +1097,6 @@ class fig_width_ratio(Animation):
         Easing function
     axis : matplotlib.axes.Axes, optional
         Axis to plot on
-
-    Example
-    --------
-    Resize 2 subplots from equal widths to a ratio of 2:1 in 100 frames:
-        >>> fig_width_ratio(start_widths=(1,1),end_widths=(1,2),duration=100)
     """
     def __init__(self,start_widths,end_widths,duration,delay=0,easing=None,axis=None,*args,**kwargs):
         super().__init__(axis=axis,*args, **kwargs)
@@ -1193,11 +1168,6 @@ class fig_height_ratio(Animation):
         Easing function
     axis : matplotlib.axes.Axes, optional
         Axis to plot on
-
-    Example
-    --------
-    Resize 2 subplots from equal heights to a ratio of 2:1 in 100 frames:
-        >>> fig_width_ratio(start_heights=(1,1),end_heights=(1,2),duration=100)
     """
     def __init__(self,start_heights,end_heights,duration,delay=0,easing=None,axis=None,*args,**kwargs):
         super().__init__(axis=axis,*args, **kwargs)
@@ -3435,7 +3405,7 @@ class text(Animation):
     Add the text *s* to the Axes at location *x*, *y* in data coordinates,
     with a default ``horizontalalignment`` on the ``left`` and
     ``verticalalignment`` at the ``baseline``. 
-    
+
     Parameters
     ----------
     x, y : float
