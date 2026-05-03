@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/titanbin/Diplotocus/blob/main/logo.png?raw=true" />
+  <img width="300" src="https://github.com/titanbin/Diplotocus/blob/main/logo.png?raw=true" />
 </p>
 
 [![Documentation](https://img.shields.io/badge/docs-passing-success)](https://diplotocus.readthedocs.io) [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/titanbin/Diplotocus/blob/main/LICENSEE) [![License](https://img.shields.io/pypi/v/diplotocus?color=blue)](https://pypi.org/project/diplotocus/)
