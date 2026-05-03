@@ -18,8 +18,8 @@ Here's a quick example of the syntax of diplotocus:
    import diplotocus as dpl
    import numpy as np
 
-   #We define our Sequence, the object that handles all animations on our figure
-   seq = dpl.Sequence(xlim=(0,6*np.pi),ylim=(-1,1))
+   #We define our Timeline, the object that handles all animations on our figure
+   tl = dpl.Timeline(xlim=(0,6*np.pi),ylim=(-1,1))
 
    #We generate data points
    x = np.linspace(0,6*np.pi,200)
@@ -30,22 +30,22 @@ Here's a quick example of the syntax of diplotocus:
 
    #We draw its data points sequentially
    p.draw(duration=100)
-   seq.animate(p)
+   tl.animate(p)
 
    #We wait 25 frames
-   seq.wait(duration=25)
+   tl.wait(duration=25)
 
    #We unzoom and move the axis to (0,0)
    az = dpl.axis_zoom(zoom=0.5,duration=50)
    am = dpl.axis_move(end_pos=(0,0),duration=50)
-   seq.animate((az,am))
+   tl.animate((az,am))
 
    #We hide the plot
    p.hide(duration=100)
-   seq.animate(p)
+   tl.animate(p)
 
    #We render our video
-   seq.save_video(path='../_static/demo.mp4')
+   tl.save_video(path='../_static/demo.mp4')
 
 .. raw:: html
 
@@ -74,6 +74,7 @@ Get started by :doc:`Installing Diplotocus <notebooks/installation>`, and follow
    :maxdepth: 3
    :caption: Library reference
    
+   notebooks/timeline
    notebooks/animations
    notebooks/easings
    

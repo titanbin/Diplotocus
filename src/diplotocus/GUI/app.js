@@ -11,7 +11,7 @@
     renderedFrames: new Set(),
     pinDragging: false,
     previewUrl: null,
-    hasSequence: false,
+    hasTimeline: false,
     hasPlotObjects: false,
     loadingState: false,
     isPlaying: false,
@@ -26,7 +26,7 @@
     previewRequestId: 0,
     renderRevision: 0,
     pendingPreviewRequestId: 0,
-    sequenceName: null,
+    timelineName: null,
     renderQueue: [],
     queuedFrames: new Set(),
     renderInFlight: false,
@@ -161,10 +161,10 @@
     state.minRowCount = Math.max(1, payload.minRowCount);
     state.rowCount = Math.max(state.minRowCount, payload.rowCount);
     state.clips = payload.clips;
-    state.hasSequence = payload.hasSequence;
+    state.hasTimeline = payload.hasTimeline;
     state.hasPlotObjects = payload.hasPlotObjects;
     state.renderRevision = payload.renderRevision;
-    state.sequenceName = payload.sequenceName;
+    state.timelineName = payload.timelineName;
 
     const existingIds = new Set(state.clips.map((c) => c.id));
     state.selectedClipIds = new Set([...state.selectedClipIds].filter((id) => existingIds.has(id)));
@@ -260,10 +260,10 @@
   }
 
   function framePath(frame) {
-    if (!state.sequenceName) {
+    if (!state.timelineName) {
       return null;
     }
-    return `/frames/${state.sequenceName}_${frame}.png`;
+    return `/frames/${state.timelineName}_${frame}.png`;
   }
 
   function setPreviewImage(frame, requestId) {
@@ -337,8 +337,8 @@
   function updatePreview(frameOverride) {
     const frame = Math.round(frameOverride ?? state.pinX);
 
-    if (!state.hasSequence || !state.hasPlotObjects) {
-      showStatus("Frame preview unavailable: pass seq and plot_objects to GUI_web.GUI(...)");
+    if (!state.hasTimeline || !state.hasPlotObjects) {
+      showStatus("Frame preview unavailable: pass a Timeline and plot_objects to GUI_web.GUI(...)");
       return;
     }
 
@@ -1112,7 +1112,7 @@
           throw new Error(res.error);
         }
         const token = String(res.token || "");
-        const serverFilename = String(res.filename || `${state.sequenceName || "video"}.mp4`);
+        const serverFilename = String(res.filename || `${state.timelineName || "video"}.mp4`);
         if (!token) {
           throw new Error("Missing export token.");
         }
@@ -1341,12 +1341,12 @@
         return;
       }
 
-      if (!state.hasSequence || !state.hasPlotObjects) {
-        showStatus("Save unavailable: pass seq and plot_objects to GUI_web.GUI(...)");
+      if (!state.hasTimeline || !state.hasPlotObjects) {
+        showStatus("Save unavailable: pass a Timeline and plot_objects to GUI_web.GUI(...)");
         return;
       }
 
-      const suggested = `${state.sequenceName || "video"}.mp4`;
+      const suggested = `${state.timelineName || "video"}.mp4`;
       const input = window.prompt("Enter output file name:", suggested);
       if (!input || !String(input).trim()) {
         showStatus("Save canceled.");
@@ -1363,12 +1363,12 @@
     });
 
     $("#btnSaveProject").on("click", function () {
-      if (!state.hasSequence) {
-        showStatus("Save project unavailable: pass seq to GUI_web.GUI(...)");
+      if (!state.hasTimeline) {
+        showStatus("Save project unavailable: pass a Timeline to GUI_web.GUI(...)");
         return;
       }
 
-      const suggested = `${state.sequenceName || "project"}.dpl`;
+      const suggested = `${state.timelineName || "project"}.dpl`;
       const input = window.prompt("Enter project file name:", suggested);
       if (!input || !String(input).trim()) {
         showStatus("Save project canceled.");

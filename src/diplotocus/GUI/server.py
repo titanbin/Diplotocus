@@ -99,7 +99,7 @@ class GUI:
 
     def __init__(
         self,
-        seq=None,
+        timeline=None,
         plot_objects=None,
         min_tracks: int = 3,
         host: str = "localhost",
@@ -115,7 +115,7 @@ class GUI:
         self._thread: threading.Thread | None = None
         self.url: str | None = None
         self.block = (not self._is_interactive()) if block is None else block
-        self.seq = seq
+        self.tl = timeline
         self.plot_objects = [] if plot_objects is None else plot_objects
         self.min_tracks = max(1, _safe_int(min_tracks, 3))
 
@@ -185,8 +185,8 @@ class GUI:
         source_axis = getattr(source_object, "axis", None)
         if source_axis is not None:
             return source_axis
-        if self.seq is not None and hasattr(self.seq, "main_axis"):
-            return self.seq.main_axis
+        if self.tl is not None and hasattr(self.tl, "main_axis"):
+            return self.tl.main_axis
         return None
 
     def _default_ratio_length(self, axis, use_width):
@@ -338,19 +338,19 @@ class GUI:
             "rowCount": row_count,
             "minRowCount": self.min_tracks,
             "clips": clips,
-            "hasSequence": self.seq is not None,
+            "hasTimeline": self.tl is not None,
             "hasPlotObjects": len(self._all_objects()) > 0,
             "renderRevision": self._render_revision,
-            "sequenceName": getattr(self.seq, "name", None),
+            "timelineName": getattr(self.tl, "name", None),
             "invalidatedFromFrame": self._last_invalidated_from,
         }
 
     def _render_dirs(self):
-        if self.seq is None:
+        if self.tl is None:
             return []
-        dirs = [Path(self.seq.name)]
-        if hasattr(self.seq, "full_path"):
-            dirs.insert(0, Path(self.seq.full_path) / self.seq.name)
+        dirs = [Path(self.tl.name)]
+        if hasattr(self.tl, "full_path"):
+            dirs.insert(0, Path(self.tl.full_path) / self.tl.name)
         unique = []
         seen = set()
         for d in dirs:
@@ -362,13 +362,13 @@ class GUI:
         return unique
 
     def _invalidate_render_cache(self, from_frame=None):
-        if self.seq is None:
+        if self.tl is None:
             return
         if from_frame is None:
             from_frame = 0
         self._last_invalidated_from = max(0, int(from_frame))
-        prefix = f"{self.seq.name}_"
-        pattern = re.compile(rf"^{re.escape(self.seq.name)}_(\d+)\.png$")
+        prefix = f"{self.tl.name}_"
+        pattern = re.compile(rf"^{re.escape(self.tl.name)}_(\d+)\.png$")
         for d in self._render_dirs():
             if not d.exists() or not d.is_dir():
                 continue
@@ -386,9 +386,9 @@ class GUI:
         self._render_revision += 1
 
     def _clear_render_cache_on_load(self):
-        if self.seq is None:
+        if self.tl is None:
             return
-        prefix = f"{self.seq.name}_"
+        prefix = f"{self.tl.name}_"
         for d in self._render_dirs():
             if not d.exists() or not d.is_dir():
                 continue
@@ -899,22 +899,22 @@ class GUI:
             self._invalidate_render_cache(from_frame=invalidate_from)
 
     def _frame_file_paths(self, frame):
-        filename = f"{self.seq.name}_{frame}.png"
-        paths = [Path(self.seq.name) / filename]
-        if hasattr(self.seq, "full_path"):
-            paths.insert(0, Path(self.seq.full_path) / self.seq.name / filename)
+        filename = f"{self.tl.name}_{frame}.png"
+        paths = [Path(self.tl.name) / filename]
+        if hasattr(self.tl, "full_path"):
+            paths.insert(0, Path(self.tl.full_path) / self.tl.name / filename)
         return paths
 
     def _frame_url_path(self, frame):
-        if self.seq is None:
-            raise RuntimeError("No Sequence object available.")
+        if self.tl is None:
+            raise RuntimeError("No Timeline object available.")
         frame = max(0, _safe_int(frame, 0))
-        return f"/frames/{self.seq.name}_{frame}.png"
+        return f"/frames/{self.tl.name}_{frame}.png"
 
     def _frame_path_from_name(self, filename):
-        if self.seq is None:
+        if self.tl is None:
             return None
-        expected_prefix = f"{self.seq.name}_"
+        expected_prefix = f"{self.tl.name}_"
         if not filename.startswith(expected_prefix) or not filename.endswith(".png"):
             return None
 
@@ -931,37 +931,37 @@ class GUI:
             if path.is_file():
                 return path
 
-        if self.seq is None:
-            raise RuntimeError("No Sequence object available. Pass seq to GUI_web.GUI(seq=...).")
+        if self.tl is None:
+            raise RuntimeError("No Timeline object available. Pass a timeline to GUI_web.GUI(timeline=...).")
 
         objs = self._all_objects()
         if len(objs) == 0:
             raise RuntimeError("No plot objects available. Pass plot_objects to GUI_web.GUI(...).")
 
-        self.seq.clean_all()
-        self.seq.plot(objs, x=frame)
+        self.tl.clean_all()
+        self.tl.plot(objs, x=frame)
 
         for path in self._frame_file_paths(frame):
             if path.is_file():
                 return path
 
-        raise RuntimeError("Rendered frame file not found after sequence.plot call.")
+        raise RuntimeError("Rendered frame file not found after timeline.plot call.")
 
     def _render_frame_png(self, frame):
         return self._ensure_frame_rendered(frame).read_bytes()
 
     def _export_video_to_temp(self, timeline_width=None):
-        if self.seq is None:
-            raise RuntimeError("No Sequence object available. Pass seq to GUI_web.GUI(seq=...).")
+        if self.tl is None:
+            raise RuntimeError("No Timeline object available. Pass a timeline to GUI_web.GUI(timeline=...).")
 
         max_frame = _safe_int(timeline_width, self._max_frame())
-        self.seq.x = max(self.seq.x, max_frame + 1)
+        self.tl.x = max(self.tl.x, max_frame + 1)
 
-        ext = ".mov" if getattr(self.seq, "transparent", False) else ".mp4"
+        ext = ".mov" if getattr(self.tl, "transparent", False) else ".mp4"
         tmpdir = Path(tempfile.mkdtemp(prefix="diplotocus_export_"))
-        outfile = tmpdir / f"{getattr(self.seq, 'name', 'video')}{ext}"
+        outfile = tmpdir / f"{getattr(self.tl, 'name', 'video')}{ext}"
 
-        self.seq.save_video(path=str(outfile), clean=False)
+        self.tl.save_video(path=str(outfile), clean=False)
         token = uuid.uuid4().hex
         self._temp_exports[token] = {"path": outfile, "dir": tmpdir}
         ctype = mimetypes.guess_type(str(outfile))[0] or "application/octet-stream"
@@ -993,8 +993,8 @@ class GUI:
         return data, filename, ctype
 
     def _save_project_file(self, filename):
-        if self.seq is None or not hasattr(self.seq, "save_project"):
-            raise RuntimeError("Save project unavailable: no sequence attached.")
+        if self.tl is None or not hasattr(self.tl, "save_project"):
+            raise RuntimeError("Save project unavailable: no timeline attached.")
 
         name = str(filename or "").strip()
         if not name:
@@ -1005,7 +1005,7 @@ class GUI:
             target = Path.cwd() / target
         target.parent.mkdir(parents=True, exist_ok=True)
 
-        self.seq.save_project(str(target))
+        self.tl.save_project(str(target))
         return str(target)
 
     def _read_project_file(self, filename):

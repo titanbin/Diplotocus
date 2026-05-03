@@ -49,7 +49,7 @@ class Animation:
     """
     def __init__(self,easing=None,axis=None,**kwargs):
         self.anims = []
-        self.seq = None
+        self.tl = None
         self.set_easing(easing)
         self.set_axis(axis)
         self.animate_easing = None
@@ -125,8 +125,8 @@ class Animation:
 
     def set_axis(self,axis):
         self.axis = axis
-        if self.axis is None and self.seq is not None:
-            self.set_axis(self.seq.main_axis)
+        if self.axis is None and self.tl is not None:
+            self.set_axis(self.tl.main_axis)
         return self
 
     def set_easing(self,easing):
@@ -289,10 +289,10 @@ class Animation:
         if self.function is not None:
             self.function(data_x,data_y,x,kwargs)
 
-    def initialize(self,sequence):
-        self.seq = sequence
+    def initialize(self,timeline):
+        self.tl = timeline
         if self.axis is None:
-            self.set_axis(self.seq.main_axis)
+            self.set_axis(self.tl.main_axis)
         
         self.clean(0)
         self.compute_timings()
@@ -312,8 +312,8 @@ class Animation:
 
     def get_t_from_x(self,anim,x):
         easing = easings.easeLinear()
-        if self.seq.easing is not None:
-            easing = self.seq.easing
+        if self.tl.easing is not None:
+            easing = self.tl.easing
         if self.easing is not None:
             easing = self.easing
         if self.animate_easing is not None:
@@ -980,9 +980,9 @@ class fig_width_ratio(Animation):
         self.compute_timings()
 
     def init(self):
-        if self.seq.fig.get_layout_engine() is None:
+        if self.tl.fig.get_layout_engine() is None:
             #Band-aid fix
-            self.seq.fig.set_layout_engine('tight')
+            self.tl.fig.set_layout_engine('tight')
         if self.grid is None:
             self.grid = self.axis.get_gridspec()
 
@@ -997,8 +997,8 @@ class fig_width_ratio(Animation):
         
         self.grid.set_width_ratios(widths)
 
-        axes = to_np_array(self.seq.fig.get_axes())
-        shape = self.seq.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
+        axes = to_np_array(self.tl.fig.get_axes())
+        shape = self.tl.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
         axes = axes.reshape(shape)        
         for i in range(len(widths)):
             if widths[i] < 1e-3:
@@ -1056,9 +1056,9 @@ class fig_height_ratio(Animation):
         self.compute_timings()
 
     def init(self):
-        if self.seq.fig.get_layout_engine() is None:
+        if self.tl.fig.get_layout_engine() is None:
             #Band-aid fix
-            self.seq.fig.set_layout_engine('tight')
+            self.tl.fig.set_layout_engine('tight')
         if self.grid is None:
             self.grid = self.axis.get_gridspec()
 
@@ -1073,8 +1073,8 @@ class fig_height_ratio(Animation):
         
         self.grid.set_height_ratios(heights)
 
-        axes = to_np_array(self.seq.fig.get_axes())
-        shape = self.seq.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
+        axes = to_np_array(self.tl.fig.get_axes())
+        shape = self.tl.fig.axes[0].get_subplotspec().get_gridspec().get_geometry()
         axes = axes.reshape(shape)
         for i in range(len(heights)):
             if heights[i] < 1e-3:

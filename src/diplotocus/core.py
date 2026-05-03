@@ -46,17 +46,17 @@ def status_message(start_msg, end_msg):
         return update
 
 #----------------------------------------------
-# SEQUENCE CLASS
+# TIMELINE CLASS
 #----------------------------------------------
 
 def load_project(path):
-    seq = pickle.load(open(path, 'rb'))
-    animations = seq.animations
-    seq.x = 0
-    seq.clean_all()
-    return seq,animations
+    tl = pickle.load(open(path, 'rb'))
+    animations = tl.animations
+    tl.x = 0
+    tl.clean_all()
+    return tl,animations
 
-class Sequence:
+class Timeline:
     def __init__(self,
                  name='Unnamed',
                  fig=None,
@@ -97,7 +97,7 @@ class Sequence:
         self.dpi = dpi
         self.easing = easing
         self.x = 0
-        self.sequence_str = ''
+        self.timeline_str = ''
         self.transparent = transparent
         self.animations = []
         if in_notebook() == False:
@@ -220,8 +220,8 @@ class Sequence:
         for _ in range(duration):
             target_png = self.name + '/' + self.name + '_{}.png'.format(self.x)
             shutil.copyfile(source_png, target_png)
-            self.sequence_str += 'file \' ' + self.name + '_{}.png\'\n'.format(self.x)
-            self.sequence_str += 'duration {}\n'.format(1/30)
+            self.timeline_str += 'file \' ' + self.name + '_{}.png\'\n'.format(self.x)
+            self.timeline_str += 'duration {}\n'.format(1/30)
             self.x += 1
 
     def save_plot(self,debug):
@@ -231,8 +231,8 @@ class Sequence:
             fn = self.name + '/' + self.name +  '_{}.png'.format(self.x)
             self.fig.savefig(fn,dpi=self.dpi,transparent=self.transparent)
             
-            self.sequence_str += 'file \'' + self.name + '_{}.png\'\n'.format(self.x)
-            self.sequence_str += 'duration {}\n'.format(1/30)
+            self.timeline_str += 'file \'' + self.name + '_{}.png\'\n'.format(self.x)
+            self.timeline_str += 'duration {}\n'.format(1/30)
         self.x += 1
     
     def save_video(self,path=None,speed=1,ffmpeg_path='ffmpeg',multialpha=False,prerendered=False,clean=True):
@@ -248,14 +248,14 @@ class Sequence:
         if not self.quiet:
             update = status_message("Rendering video...", "Saved video " + video_fn)
         if not prerendered:
-            self.sequence_str = ''
+            self.timeline_str = ''
             for i in range(self.x):
-                self.sequence_str += 'file \'' + self.name + '_{}.png\'\n'.format(i)
-                self.sequence_str += 'duration {}\n'.format(1/30/speed)
-            self.sequence_str += 'file \'' + self.name + '_{}.png\'\n'.format(i)
-            self.sequence_str += 'duration {}\n'.format(1/30/speed)
+                self.timeline_str += 'file \'' + self.name + '_{}.png\'\n'.format(i)
+                self.timeline_str += 'duration {}\n'.format(1/30/speed)
+            self.timeline_str += 'file \'' + self.name + '_{}.png\'\n'.format(i)
+            self.timeline_str += 'duration {}\n'.format(1/30/speed)
             with open(self.name + '/' + self.name + '.txt','w+') as f:
-                f.write(self.sequence_str)
+                f.write(self.timeline_str)
         sequence_fn = self.name + '/' + self.name  + '.txt'
 
         if '.mov' in video_fn:
