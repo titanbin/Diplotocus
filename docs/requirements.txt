@@ -1,3 +1,7 @@
+sphinx
+myst-nb
+furo
+sphinx-autodoc-typehints
 matplotlib
 numpy
 svgpath2mpl

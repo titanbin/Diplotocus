@@ -57,9 +57,9 @@ Here's a quick example of the syntax of diplotocus:
 
 **Diplotocus** also features a Web GUI that lets you put your animations together visually, in a timeline-like manner:
 
-.. raw:: html
-
-   <img src="_static/Web_GUI.png" width="700">
+.. image:: _static/Web_GUI.png
+   :width: 700
+   :target: notebooks/GUI
 
 Get started by :doc:`Installing Diplotocus <notebooks/installation>`, and follow the :doc:`Quick-Start guide <notebooks/quick-start>`.
 

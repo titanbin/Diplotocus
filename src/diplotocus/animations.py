@@ -2469,9 +2469,6 @@ class errorbar(Animation):
 
         All values must be >= 0.
 
-        See :doc:`/gallery/statistics/errorbar_features`
-        for an example on the usage of ``xerr`` and ``yerr``.
-
     fmt : str, default: ''
         The format for the data points / data lines. See `.plot` for
         details.
@@ -3437,9 +3434,8 @@ class text(Animation):
 
     Add the text *s* to the Axes at location *x*, *y* in data coordinates,
     with a default ``horizontalalignment`` on the ``left`` and
-    ``verticalalignment`` at the ``baseline``. See
-    :doc:`/gallery/text_labels_and_annotations/text_alignment`.
-
+    ``verticalalignment`` at the ``baseline``. 
+    
     Parameters
     ----------
     x, y : float

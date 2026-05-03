@@ -6,11 +6,11 @@
 <link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Timeline" href="timeline.html"><link rel="prev" title="Installation" href="installation.html">
         <link rel="prefetch" href="../_static/logo.svg" as="image">
 
-    <!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
+    <link rel="shortcut icon" href="../_static/favicon.ico"><!-- Generated with Sphinx 7.4.7 and Furo 2025.12.19 -->
         <title>Quick-start guide - diplotocus 2026 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=77553476" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
-    <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css?v=6644e6bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
     <link rel="stylesheet" type="text/css" href="../_static/force-light.css?v=3f75ed2f" />
@@ -259,10 +259,10 @@
 <p>This page will guide you through the syntax and feature of Diplotocus.</p>
 <p>First, here are a few terms we will be using:</p>
 <ul class="simple">
-<li><p>a <code class="docutils literal notranslate"><span class="pre">Timeline</span></code> is the main object of a project. It holds the figure, axes, and is responsible for running animations and rendering the video (See <a class="reference internal" href="timeline.html"><span class="doc std std-doc">Timeline</span></a> for more information).</p></li>
-<li><p>a <code class="docutils literal notranslate"><span class="pre">plot</span> <span class="pre">object</span></code> is any matplotlib plotting function you are familiar with: <code class="docutils literal notranslate"><span class="pre">plot()</span></code>, <code class="docutils literal notranslate"><span class="pre">scatter()</span></code>, <code class="docutils literal notranslate"><span class="pre">hist()</span></code>, <code class="docutils literal notranslate"><span class="pre">text()</span></code>… (See <a class="reference internal" href="plot_objects.html"><span class="doc std std-doc">Plot objects</span></a> for more information).</p></li>
-<li><p>an <code class="docutils literal notranslate"><span class="pre">animation</span></code> is what is applied to <code class="docutils literal notranslate"><span class="pre">plot</span> <span class="pre">objects</span></code> to animate it: <code class="docutils literal notranslate"><span class="pre">translate()</span></code>,<code class="docutils literal notranslate"><span class="pre">rotate()</span></code>,<code class="docutils literal notranslate"><span class="pre">tween</span></code>… (See <a class="reference internal" href="animations.html"><span class="doc std std-doc">Animations</span></a> for more information).</p></li>
-<li><p>an <code class="docutils literal notranslate"><span class="pre">easing</span></code> is a mapping between frame number and time, that might not be linear (See <a class="reference internal" href="easings.html"><span class="doc std std-doc">Easings</span></a> for more information).</p></li>
+<li><p>a <code class="docutils literal notranslate"><span class="pre">Timeline</span></code> is the main object of a project. It holds the figure, axes, and is responsible for running animations and rendering the video (See <a class="reference external" href="timeline">Timeline</a> for more information).</p></li>
+<li><p>a <code class="docutils literal notranslate"><span class="pre">plot</span> <span class="pre">object</span></code> is any matplotlib plotting function you are familiar with: <code class="docutils literal notranslate"><span class="pre">plot()</span></code>, <code class="docutils literal notranslate"><span class="pre">scatter()</span></code>, <code class="docutils literal notranslate"><span class="pre">hist()</span></code>, <code class="docutils literal notranslate"><span class="pre">text()</span></code>… (See <a class="reference external" href="plot_objects">Plot objects</a> for more information).</p></li>
+<li><p>an <code class="docutils literal notranslate"><span class="pre">animation</span></code> is what is applied to <code class="docutils literal notranslate"><span class="pre">plot</span> <span class="pre">objects</span></code> to animate it: <code class="docutils literal notranslate"><span class="pre">translate()</span></code>,<code class="docutils literal notranslate"><span class="pre">rotate()</span></code>,<code class="docutils literal notranslate"><span class="pre">tween</span></code>… (See <a class="reference external" href="animations">Animations</a> for more information).</p></li>
+<li><p>an <code class="docutils literal notranslate"><span class="pre">easing</span></code> is a mapping between frame number and time, that might not be linear (<a class="reference internal" href="easings.html"><span class="doc">See Easings</span></a> for more information).</p></li>
 </ul>
 <p>The basic steps involved in creating animations are the following:</p>
 <ol class="arabic simple">
@@ -358,8 +358,8 @@
        <source src="../_static/demo.mp4" type="video/mp4">
    </video>
 </center>
-<p>Et voilà! This is a very simple example, but <strong>Diplotocus</strong> is capable of much more. You might want to add <a class="reference internal" href="#notebooks/easings"><span class="xref myst">easing functions</span></a> to your animation to make them feel more natural and smooth. You can also render your animations without axes, with a transparent background, with white axes for a dark presentation…</p>
-<p>If your animation gets complex, you might want to try the <a class="reference internal" href="#notebooks/GUI"><span class="xref myst">GUI</span></a> version of <strong>Diplotocus</strong>, which lets you build a timeline in your browser with simple controls.</p>
+<p>Et voilà! This is a very simple example, but <strong>Diplotocus</strong> is capable of much more. You might want to add <a class="reference internal" href="easings.html"><span class="doc">easing functions</span></a> to your animation to make them feel more natural and smooth. You can also render your animations without axes, with a transparent background, with white axes for a dark presentation…</p>
+<p>If your animation gets complex, you might want to try the <a class="reference internal" href="GUI.html"><span class="doc">GUI</span></a> version of <strong>Diplotocus</strong>, which lets you build a timeline in your browser with simple controls.</p>
 </section>
 
         </article>
