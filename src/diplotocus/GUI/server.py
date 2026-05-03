@@ -89,12 +89,28 @@ def _safe_name(name):
     return text
 
 class GUI:
-    """Serve the web GUI locally.
+    """A Graphical User Interface object that launches a python server that serves a webpage.
 
-    Example:
-        import diplotocus
-        web_gui = diplotocus.GUI_web.GUI()
-        web_gui.wait()  # Optional: block current process
+    Parameters
+    ----------
+    timeline : Timeline
+        the Timeline object that renders our animation.
+    plot_objects : list[dict]
+        a list of dictionaries containing the keys:
+                        - `name`: the display name shown in the GUI.
+                        - `object`: the plot object.
+                        - `new_x`/`new_y` (optional): datapoints to be used when the
+                            morph() animation is used on the plot object.
+    min_tracks : int, default=3
+        the minimum number of tracks to be shown. This will be the
+        initial number of tracks.
+    host : str, default="localhost"
+        the URL to which the server serves content.
+    port : int, default=8008
+        the port used to communicate with the server.
+    open_browser : bool, default=True
+        if True, opens the webpage at host:port immediatly after
+        the server is launched.
     """
 
     def __init__(
@@ -105,8 +121,6 @@ class GUI:
         host: str = "localhost",
         port: int = 8008,
         open_browser: bool = True,
-        auto_start: bool = True,
-        block: bool | None = None,
     ) -> None:
         self.host = host
         self.port = port
@@ -114,7 +128,6 @@ class GUI:
         self._server: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
         self.url: str | None = None
-        self.block = (not self._is_interactive()) if block is None else block
         self.tl = timeline
         self.plot_objects = [] if plot_objects is None else plot_objects
         self.min_tracks = max(1, _safe_int(min_tracks, 3))
@@ -132,15 +145,8 @@ class GUI:
         self._row_count_override = None
         self._last_invalidated_from = 0
         self._temp_exports = {}
-
-        if auto_start:
-            self.serve(open_browser=open_browser)
-            if self.block:
-                self.wait()
-
-    @staticmethod
-    def _is_interactive() -> bool:
-        return bool(getattr(sys, "ps1", False) or sys.flags.interactive)
+        self.serve(open_browser=open_browser)
+        self.wait()
 
     def _all_objects(self):
         objects = []

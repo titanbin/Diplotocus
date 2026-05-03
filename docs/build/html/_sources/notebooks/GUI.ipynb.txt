@@ -1,0 +1,91 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "fc90d5b2",
+   "metadata": {},
+   "source": [
+    "# GUI\n",
+    "\n",
+    "**Diplotocus** features a GUI (Graphical User Interface):\n",
+    "\n",
+    "![](../_static/Web_GUI.png)\n",
+    "\n",
+    "When running diplotocus through this mode, you will make edit your animation through a local web page in your browser. This page communicates with a python server, which links the GUI and diplotocus objects in the background. Hence, everything you can do through python, you can do through the GUI, and vice versa.\n",
+    "\n",
+    "```{note}\n",
+    "\n",
+    "The datapoints used in any of the plot objects of your animations have to be created before launching the GUI, as they will be passed to the function that launches the GUI.\n",
+    "```\n",
+    "\n",
+    "```{eval-rst}\n",
+    ".. autoclass:: diplotocus.GUI\n",
+    "    :members:\n",
+    "    :noindex:\n",
+    "```\n",
+    "\n",
+    "Here's an example on how to launch the GUI:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "8069c581",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import diplotocus as dpl\n",
+    "import numpy as np\n",
+    "\n",
+    "#We define our datapoints\n",
+    "x = np.linspace(0,2*np.pi,100)\n",
+    "y = np.cos(x)\n",
+    "\n",
+    "#We create our plot objects\n",
+    "a = dpl.scatter(x,y)\n",
+    "b = dpl.plot(x,y*2)\n",
+    "\n",
+    "#We create our timeline\n",
+    "tl = dpl.Timeline(xlim=(0,2*np.pi),ylim=(-1,1))\n",
+    "\n",
+    "#We pass our timeline, and a list of dictionaries of our plot objects,\n",
+    "#their display name, and any data that might be used by animations\n",
+    "GUI = dpl.GUI(\n",
+    "    timeline=tl,\n",
+    "    plot_objects=[\n",
+    "    {\n",
+    "        'name':'scatter',\n",
+    "        'object':a,\n",
+    "        'new_x':x,\n",
+    "        'new_y':y/2\n",
+    "    },\n",
+    "    {\n",
+    "        'name':'plot',\n",
+    "        'object':b\n",
+    "    }\n",
+    "])"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.13.3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

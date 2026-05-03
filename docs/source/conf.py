@@ -22,8 +22,14 @@ extensions = [
     "myst_nb",
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    "sphinx_autodoc_typehints"
+    "sphinx.ext.intersphinx",
+    "sphinx_autodoc_typehints",
+    "sphinx_copybutton"
 ]
+
+intersphinx_mapping = {
+    "matplotlib": ("https://matplotlib.org/stable", "https://matplotlib.org/stable/objects.inv"),
+}
 
 templates_path = ['_templates']
 # exclude specific generated/unused notebooks to avoid spurious warnings

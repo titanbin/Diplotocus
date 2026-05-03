@@ -333,9 +333,43 @@ class Animation:
         return properties,starts,ends
 
     def tween(self,property,start,end,duration,delay=0,easing=None,persistent=True):
+        """Animate a change in a property of the plot object.
+
+        Parameters
+        ----------
+        property : str
+            the name of the property to animate.
+        start : any
+            the starting value of the property.
+        end : any
+            the ending value of the property.
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        """
         return self.tweens([property],[start],[end],duration,delay,easing,persistent=persistent)
     
     def tweens(self,properties,starts,ends,duration,delay=0,easing=None,persistent=True):
+        """Animate multiple properties at once.
+
+        Parameters
+        ----------
+        properties : list[str]
+            a list of the names of the properties to animate.
+        starts : list[Any]
+            the starting values of the properties.
+        ends : list[Any]
+            the ending values of the properties.
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        """
         starts = [to_np_array(start) for start in starts]
         ends = [to_np_array(end) for end in ends]
         properties = self.get_main_alias(properties)
@@ -373,12 +407,57 @@ class Animation:
         return kwargs
 
     def show(self,duration,delay=0,easing=None,persistent=True):
+        """Fade in plot objects.
+
+        This is a shorthand animation that fades in plot objects. It is equivalent to `tween('alpha',0,1)`.
+
+        Parameters
+        ----------
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        persistent : bool, default=True
+            if True, the plot object will continue to be plotted after its last animation has played.
+        """
         return self.tween('alpha',start=0,end=1,duration=duration,delay=delay,easing=easing,persistent=persistent)
 
     def hide(self,duration,delay=0,easing=None,persistent=True):
+        """Fade out plot objects.
+
+        This is a shorthand animation that fades out plot objects. It is equivalent to `tween('alpha',1,0)`.
+
+        Parameters
+        ----------
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        persistent : bool, default=True
+            if True, the plot object will continue to be plotted after its last animation has played.
+        """
         return self.tween('alpha',start=1,end=0,duration=duration,delay=delay,easing=easing,persistent=persistent)
     
     def draw(self,duration,reverse=False,delay=0,easing=None,persistent=True):
+        """Animate the plot object by sequentially adding more points of the dataset.
+
+        Parameters
+        ----------
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        reverse : bool, default=False
+            if True, removes points sequentially instead of adding points.
+        persistent : bool, default=True
+            if True, the plot object will continue to be plotted after its last animation has played.
+        """
         self.anims.append({
             'name':'draw',
             'duration':duration,
@@ -392,6 +471,25 @@ class Animation:
         return self
     
     def scale(self,start_scale,end_scale,duration,center=None,delay=0,easing=None,persistent=True):
+        """Scale a plot object from one size to another.
+
+        Parameters
+        ----------
+        start_scale : float or tuple[float, float]
+            the starting scale of the plot object.
+        end_scale : float or tuple[float, float]
+            the ending scale of the plot object.
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        persistent : bool, default=True
+            if True, the plot object will continue to be plotted after its last animation has played.
+
+        You can either pass scalar values, in which case the plot object will be uniformly scaled, or a 2-tuple for independent X and Y scales.
+        """
         if isinstance(start_scale,(list,tuple,np.ndarray)):
             scalex_start,scaley_start = start_scale
         else:
@@ -447,6 +545,23 @@ class Animation:
                 o.set_transform(self.T + self.axis.transData)
 
     def rotate(self,start_angle,end_angle,duration,center=None,delay=0,easing=None,persistent=True):
+        """Rotate a plot object from one angle to another.
+
+        Parameters
+        ----------
+        start_angle : float
+            the starting angle of the rotation in radians.
+        end_angle : float
+            the ending angle of the rotation in radians.
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        persistent : bool, default=True
+            if True, the plot object will continue to be plotted after its last animation has played.
+        """
         self.anims.append({
             'name':'rotate',
             'duration':duration,
@@ -492,6 +607,23 @@ class Animation:
                 o.set_transform(self.T + self.axis.transData)
     
     def translate(self,start_pos,end_pos,duration,delay=0,easing=None,persistent=True):
+        """Move a plot object from one position to another.
+
+        Parameters
+        ----------
+        start_pos : array-like
+            where the translation starts, relative to the current center of the plot object.
+        end_pos : array-like
+            where the translation ends, relative to the current center of the plot object.
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        persistent : bool, default=True
+            if True, the plot object will continue to be plotted after its last animation has played.
+        """
         self.anims.append({
             'name':'translate',
             'duration':duration,
@@ -518,6 +650,25 @@ class Animation:
                 o.set_transform(self.T + self.axis.transData)
     
     def morph(self,new_x,new_y,duration,delay=0,easing=None,persistent=True):
+        """Morph between the base dataset and a new dataset.
+
+        Parameters
+        ----------
+        new_x : array-like or float
+            the x data points to morph to.
+        new_y : array-like or float
+            the y data points to morph to.
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        persistent : bool, default=True
+            if True, the plot object will continue to be plotted after its last animation has played.
+
+        For plot objects that take 1D datasets (e.g. hist()), `morph()` only accepts `new_x`.
+        """
         # TODO : if new_x/new_y not the same size, resample them to match
         if isinstance(new_x,numbers.Number):
             new_x = [new_x]
@@ -539,6 +690,21 @@ class Animation:
         return self
     
     def sequence(self,duration,delay=0,easing=None,persistent=True):
+        """Plot one datapoint or row of the dataset per frame.
+
+        Parameters
+        ----------
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        persistent : bool, default=True
+            if True, the plot object will continue to be plotted after its last animation has played.
+
+        If the dataset is 1-dimensional, this plots a single datapoint per frame, if 2D, it will plot one row per frame. This animation can be used if you have a predefined list of datapoints you want to animate frame-by-frame.
+        """
         self.anims.append({
             'name':'sequence',
             'duration':duration,
@@ -1120,7 +1286,7 @@ class scatter(Animation):
         To eliminate the marker edge either set *linewidth=0* or
         *edgecolor='none'*.
 
-    c : array-like or list of :mpltype:`color` or :mpltype:`color`, optional
+    c : array-like or list of color or color, optional
         The marker colors. Possible values:
 
         - A scalar or sequence of n numbers to be mapped to colors using
@@ -1143,15 +1309,15 @@ class scatter(Animation):
         by the value of *color*, *facecolor* or *facecolors*. In case
         those are not specified or `None`, the marker color is determined
         by the next color of the ``Axes``' current "shape and fill" color
-        cycle. This cycle defaults to :rc:`axes.prop_cycle`.
+        cycle. This cycle defaults to axes.prop_cycle.
 
-    marker : `~.markers.MarkerStyle`, default: :rc:`scatter.marker`
+    marker : `~.markers.MarkerStyle`, default: scatter.marker
         The marker style. *marker* can be either an instance of the class
         or the text shorthand for a particular marker.
         See :mod:`matplotlib.markers` for more information about marker
         styles.
 
-    cmap : str or `~matplotlib.colors.Colormap`, default: :rc:`image.cmap`
+    cmap : str or `~matplotlib.colors.Colormap`, default: image.cmap
         The Colormap instance or registered colormap name used to map scalar data
         to colors.
 
@@ -1185,11 +1351,11 @@ class scatter(Animation):
     alpha : float, default: None
         The alpha blending value, between 0 (transparent) and 1 (opaque).
 
-    linewidths : float or array-like, default: :rc:`lines.linewidth`
+    linewidths : float or array-like, default: lines.linewidth
         The linewidth of the marker edges. Note: The default *edgecolors*
         is 'face'. You may want to change this as well.
 
-    edgecolors : {'face', 'none', *None*} or :mpltype:`color` or list of :mpltype:`color`, default: :rc:`scatter.edgecolors`
+    edgecolors : {'face', 'none', *None*} or color or list of color, default: scatter.edgecolors
         The edge color of the marker. Possible values:
 
         - 'face': The edge color will always be the same as the face color.
@@ -1235,9 +1401,9 @@ class scatter(Animation):
         clip_on: bool
         clip_path: Patch or (Path, Transform) or None
         cmap: `.Colormap` or str or None
-        color: :mpltype:`color` or list of RGBA tuples
-        edgecolor or ec or edgecolors: :mpltype:`color` or list of :mpltype:`color` or 'face'
-        facecolor or facecolors or fc: :mpltype:`color` or list of :mpltype:`color`
+        color: color or list of RGBA tuples
+        edgecolor or ec or edgecolors: color or list of color or 'face'
+        facecolor or facecolors or fc: color or list of color
         figure: `~matplotlib.figure.Figure` or `~matplotlib.figure.SubFigure`
         gid: str
         hatch: {'/', '\\', '|', '-', '+', 'x', 'o', 'O', '.', '*'}
@@ -1398,7 +1564,7 @@ class plot(Animation):
     'style cycle'. The *fmt* and line property parameters are only
     necessary if you want explicit deviations from these defaults.
     Alternatively, you can also change the style cycle using
-    :rc:`axes.prop_cycle`.
+    axes.prop_cycle.
 
 
     Parameters
@@ -1480,7 +1646,7 @@ class plot(Animation):
         clip_box: `~matplotlib.transforms.BboxBase` or None
         clip_on: bool
         clip_path: Patch or (Path, Transform) or None
-        color or c: :mpltype:`color`
+        color or c: color
         dash_capstyle: `.CapStyle` or {'butt', 'projecting', 'round'}
         dash_joinstyle: `.JoinStyle` or {'miter', 'round', 'bevel'}
         dashes: sequence of floats (on/off ink in points) or (None, None)
@@ -1488,17 +1654,17 @@ class plot(Animation):
         drawstyle or ds: {'default', 'steps', 'steps-pre', 'steps-mid', 'steps-post'}, default: 'default'
         figure: `~matplotlib.figure.Figure` or `~matplotlib.figure.SubFigure`
         fillstyle: {'full', 'left', 'right', 'bottom', 'top', 'none'}
-        gapcolor: :mpltype:`color` or None
+        gapcolor: color or None
         gid: str
         in_layout: bool
         label: object
         linestyle or ls: {'-', '--', '-.', ':', '', (offset, on-off-seq), ...}
         linewidth or lw: float
         marker: marker style string, `~.path.Path` or `~.markers.MarkerStyle`
-        markeredgecolor or mec: :mpltype:`color`
+        markeredgecolor or mec: color
         markeredgewidth or mew: float
-        markerfacecolor or mfc: :mpltype:`color`
-        markerfacecoloralt or mfcalt: :mpltype:`color`
+        markerfacecolor or mfc: color
+        markerfacecoloralt or mfcalt: color
         markersize or ms: float
         markevery: None or int or (int, int) or slice or list[int] or float or (float, float) or list[bool]
         mouseover: bool
@@ -1811,10 +1977,10 @@ class fill_between(Animation):
         clip_on: bool
         clip_path: Patch or (Path, Transform) or None
         cmap: `.Colormap` or str or None
-        color: :mpltype:`color` or list of RGBA tuples
+        color: color or list of RGBA tuples
         data: array-like
-        edgecolor or ec or edgecolors: :mpltype:`color` or list of :mpltype:`color` or 'face'
-        facecolor or facecolors or fc: :mpltype:`color` or list of :mpltype:`color`
+        edgecolor or ec or edgecolors: color or list of color or 'face'
+        facecolor or facecolors or fc: color or list of color
         figure: `~matplotlib.figure.Figure` or `~matplotlib.figure.SubFigure`
         gid: str
         hatch: {'/', '\\', '|', '-', '+', 'x', 'o', 'O', '.', '*'}
@@ -1979,10 +2145,10 @@ class fill_betweenx(Animation):
         clip_on: bool
         clip_path: Patch or (Path, Transform) or None
         cmap: `.Colormap` or str or None
-        color: :mpltype:`color` or list of RGBA tuples
+        color: color or list of RGBA tuples
         data: array-like
-        edgecolor or ec or edgecolors: :mpltype:`color` or list of :mpltype:`color` or 'face'
-        facecolor or facecolors or fc: :mpltype:`color` or list of :mpltype:`color`
+        edgecolor or ec or edgecolors: color or list of color or 'face'
+        facecolor or facecolors or fc: color or list of color
         figure: `~matplotlib.figure.Figure` or `~matplotlib.figure.SubFigure`
         gid: str
         hatch: {'/', '\\', '|', '-', '+', 'x', 'o', 'O', '.', '*'}
@@ -2106,7 +2272,7 @@ class axvline(Animation):
         clip_box: `~matplotlib.transforms.BboxBase` or None
         clip_on: bool
         clip_path: Patch or (Path, Transform) or None
-        color or c: :mpltype:`color`
+        color or c: color
         dash_capstyle: `.CapStyle` or {'butt', 'projecting', 'round'}
         dash_joinstyle: `.JoinStyle` or {'miter', 'round', 'bevel'}
         dashes: sequence of floats (on/off ink in points) or (None, None)
@@ -2114,17 +2280,17 @@ class axvline(Animation):
         drawstyle or ds: {'default', 'steps', 'steps-pre', 'steps-mid', 'steps-post'}, default: 'default'
         figure: `~matplotlib.figure.Figure` or `~matplotlib.figure.SubFigure`
         fillstyle: {'full', 'left', 'right', 'bottom', 'top', 'none'}
-        gapcolor: :mpltype:`color` or None
+        gapcolor: color or None
         gid: str
         in_layout: bool
         label: object
         linestyle or ls: {'-', '--', '-.', ':', '', (offset, on-off-seq), ...}
         linewidth or lw: float
         marker: marker style string, `~.path.Path` or `~.markers.MarkerStyle`
-        markeredgecolor or mec: :mpltype:`color`
+        markeredgecolor or mec: color
         markeredgewidth or mew: float
-        markerfacecolor or mfc: :mpltype:`color`
-        markerfacecoloralt or mfcalt: :mpltype:`color`
+        markerfacecolor or mfc: color
+        markerfacecoloralt or mfcalt: color
         markersize or ms: float
         markevery: None or int or (int, int) or slice or list[int] or float or (float, float) or list[bool]
         mouseover: bool
@@ -2313,7 +2479,7 @@ class errorbar(Animation):
         Use 'none' (case-insensitive) to plot errorbars without any data
         markers.
 
-    ecolor : :mpltype:`color`, default: None
+    ecolor : color, default: None
         The color of the errorbar lines.  If None, use the color of the
         line connecting the markers.
 
@@ -2321,7 +2487,7 @@ class errorbar(Animation):
         The linewidth of the errorbar lines. If None, the linewidth of
         the current style is used.
 
-    capsize : float, default: :rc:`errorbar.capsize`
+    capsize : float, default: errorbar.capsize
         The length of the error bar caps in points.
 
     capthick : float, default: None
@@ -2416,7 +2582,7 @@ class errorbar(Animation):
         clip_box: `~matplotlib.transforms.BboxBase` or None
         clip_on: bool
         clip_path: Patch or (Path, Transform) or None
-        color or c: :mpltype:`color`
+        color or c: color
         dash_capstyle: `.CapStyle` or {'butt', 'projecting', 'round'}
         dash_joinstyle: `.JoinStyle` or {'miter', 'round', 'bevel'}
         dashes: sequence of floats (on/off ink in points) or (None, None)
@@ -2424,17 +2590,17 @@ class errorbar(Animation):
         drawstyle or ds: {'default', 'steps', 'steps-pre', 'steps-mid', 'steps-post'}, default: 'default'
         figure: `~matplotlib.figure.Figure` or `~matplotlib.figure.SubFigure`
         fillstyle: {'full', 'left', 'right', 'bottom', 'top', 'none'}
-        gapcolor: :mpltype:`color` or None
+        gapcolor: color or None
         gid: str
         in_layout: bool
         label: object
         linestyle or ls: {'-', '--', '-.', ':', '', (offset, on-off-seq), ...}
         linewidth or lw: float
         marker: marker style string, `~.path.Path` or `~.markers.MarkerStyle`
-        markeredgecolor or mec: :mpltype:`color`
+        markeredgecolor or mec: color
         markeredgewidth or mew: float
-        markerfacecolor or mfc: :mpltype:`color`
-        markerfacecoloralt or mfcalt: :mpltype:`color`
+        markerfacecolor or mfc: color
+        markerfacecoloralt or mfcalt: color
         markersize or ms: float
         markevery: None or int or (int, int) or slice or list[int] or float or (float, float) or list[bool]
         mouseover: bool
@@ -2550,7 +2716,7 @@ class hist(Animation):
         Axis to plot on
 
 
-    bins : int or sequence or str, default: :rc:`hist.bins`
+    bins : int or sequence or str, default: hist.bins
         If *bins* is an integer, it defines the number of equal-width bins
         in the range.
 
@@ -2646,7 +2812,7 @@ class hist(Animation):
     log : bool, default: False
         If ``True``, the histogram axis will be set to a log scale.
 
-    color : :mpltype:`color` or list of :mpltype:`color` or None, default: None
+    color : color or list of color or None, default: None
         Color or sequence of colors, one per dataset.  Default (``None``)
         uses the standard line color sequence.
 
@@ -2826,7 +2992,7 @@ class hist2d(Animation):
 
     Other Parameters
     ----------------
-    cmap : str or `~matplotlib.colors.Colormap`, default: :rc:`image.cmap`
+    cmap : str or `~matplotlib.colors.Colormap`, default: image.cmap
         The Colormap instance or registered colormap name used to map scalar data
         to colors.
 
@@ -2975,14 +3141,14 @@ class contourf(Animation):
 
     Other Parameters
     ----------------
-    corner_mask : bool, default: :rc:`contour.corner_mask`
+    corner_mask : bool, default: contour.corner_mask
         Enable/disable corner masking, which only has an effect if *Z* is
         a masked array.  If ``False``, any quad touching a masked point is
         masked out.  If ``True``, only the triangular corners of quads
         nearest those points are always masked out, other triangular
         corners comprising three unmasked points are contoured as usual.
 
-    colors : :mpltype:`color` or list of :mpltype:`color`, optional
+    colors : color or list of color, optional
         The colors of the levels, i.e. the lines for `.contour` and the
         areas for `.contourf`.
 
@@ -3002,7 +3168,7 @@ class contourf(Animation):
     alpha : float, default: 1
         The alpha blending value, between 0 (transparent) and 1 (opaque).
 
-    cmap : str or `~matplotlib.colors.Colormap`, default: :rc:`image.cmap`
+    cmap : str or `~matplotlib.colors.Colormap`, default: image.cmap
         The Colormap instance or registered colormap name used to map scalar data
         to colors.
 
@@ -3051,7 +3217,7 @@ class contourf(Animation):
         - 'lower': ``Z[0, 0]`` is at X=0.5, Y=0.5 in the lower left corner.
         - 'upper': ``Z[0, 0]`` is at X=N+0.5, Y=0.5 in the upper left
           corner.
-        - 'image': Use the value from :rc:`image.origin`.
+        - 'image': Use the value from image.origin.
 
     extent : (x0, x1, y0, y1), optional
         If *origin* is not *None*, then *extent* is interpreted as in
@@ -3111,7 +3277,7 @@ class contourf(Animation):
     antialiased : bool, optional
         Enable antialiasing, overriding the defaults.  For
         filled contours, the default is *False*.  For line contours,
-        it is taken from :rc:`lines.antialiased`.
+        it is taken from lines.antialiased.
 
     nchunk : int >= 0, optional
         If 0, no subdivision of the domain.  Specify a positive integer to
@@ -3122,7 +3288,7 @@ class contourf(Animation):
         however introduce rendering artifacts at chunk boundaries depending
         on the backend, the *antialiased* flag and value of *alpha*.
 
-    linewidths : float or array-like, default: :rc:`contour.linewidth`
+    linewidths : float or array-like, default: contour.linewidth
         *Only applies to* `.contour`.
 
         The line width of the contour lines.
@@ -3132,7 +3298,7 @@ class contourf(Animation):
         If a sequence, the levels in ascending order will be plotted with
         the linewidths in the order specified.
 
-        If None, this falls back to :rc:`lines.linewidth`.
+        If None, this falls back to lines.linewidth.
 
     linestyles : {*None*, 'solid', 'dashed', 'dashdot', 'dotted'}, optional
         *Only applies to* `.contour`.
@@ -3152,7 +3318,7 @@ class contourf(Animation):
         specifies the line style for negative contours.
 
         If *negative_linestyles* is *None*, the default is taken from
-        :rc:`contour.negative_linestyle`.
+        contour.negative_linestyle.
 
         *negative_linestyles* can also be an iterable of the above strings
         specifying a set of linestyles to be used. If this iterable is shorter than
@@ -3171,7 +3337,7 @@ class contourf(Animation):
         `ContourPy documentation <https://contourpy.readthedocs.io>`_ for
         further information.
 
-        The default is taken from :rc:`contour.algorithm`.
+        The default is taken from contour.algorithm.
 
     clip_path : `~matplotlib.patches.Patch` or `.Path` or `.TransformedPath`
         Set the clip path.  See `~matplotlib.artist.Artist.set_clip_path`.
@@ -3320,12 +3486,12 @@ class text(Animation):
         alpha: float or None
         animated: bool
         antialiased: bool
-        backgroundcolor: :mpltype:`color`
+        backgroundcolor: color
         bbox: dict with properties for `.patches.FancyBboxPatch`
         clip_box: unknown
         clip_on: unknown
         clip_path: unknown
-        color or c: :mpltype:`color`
+        color or c: color
         figure: `~matplotlib.figure.Figure` or `~matplotlib.figure.SubFigure`
         fontfamily or family or fontname: {FONTNAME, 'serif', 'sans-serif', 'cursive', 'fantasy', 'monospace'}
         fontproperties or font or font_properties: `.font_manager.FontProperties` or `str` or `pathlib.Path`
@@ -3355,7 +3521,7 @@ class text(Animation):
         transform: `~matplotlib.transforms.Transform`
         transform_rotates_text: bool
         url: str
-        usetex: bool, default: :rc:`text.usetex`
+        usetex: bool, default: text.usetex
         verticalalignment or va: {'baseline', 'bottom', 'center', 'center_baseline', 'top'}
         visible: bool
         wrap: bool
@@ -3446,6 +3612,19 @@ class text(Animation):
         self.obj = patch
 
 class svg(Animation):
+    """A vector SVG object.
+
+    Parameters
+    ----------
+    data : str
+        SVG object as a string.
+    fc : color, default=None
+        the face color.
+    ec : color, default='k'
+        the edge color.
+    lw : float, default=2
+        the line width.
+    """
     def __init__(self, data, fc=None, ec='k', lw=2,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.PathPatch
         kwargs['facecolor'] = fc

@@ -57,13 +57,38 @@ def load_project(path):
     return tl,animations
 
 class Timeline:
+    """Create and manage an animation timeline.
+
+    Parameters
+    ----------
+    name : str
+        the name used for the rendered images folder.
+    fig : Figure | None
+        an existing Figure to plot on. If None, a new Figure will be created.
+    quiet : bool
+        if True, any message will not be printed, and no progress bar will be shown.
+    dpi : int
+        The DPI of the rendered images (higher = better resolution/slower render).
+    transparent : bool
+        if True, the background color of the Figure and axes will be transparent. Can be used to render a transparent video (only compatible with a .mov video file).
+    axis_color : str
+        if True, changes the color of the axes, ticks and labels to the specified color.
+    noaxis : bool
+        if True, hides the axis lines, ticks and labels.
+    easing : easing
+        a global easing to be used if no other easing is specified on an animation.
+    xlim : tuple | None
+        if fig is None, sets the X limits of the created axis.
+    ylim : tuple | None
+        if fig is None, sets the Y limits of the created axis.
+    """
     def __init__(self,
                  name='Unnamed',
                  fig=None,
                  quiet=False,
                  dpi=200,
                  transparent=False,
-                 white=False,
+                 axis_color='k',
                  noaxis=False,
                  easing=easeLinear(),
                  xlim=None,
@@ -103,24 +128,24 @@ class Timeline:
         if in_notebook() == False:
             namespace = sys._getframe(1).f_globals['__file__']
             self.full_path = '/'.join(namespace.split('/')[:-1])
-        if white:
-            self.set_white()
+        if axis_color != 'k':
+            self.set_axis_color(axis_color)
         if noaxis:
             self.main_axis.set_axis_off()
 
-    def set_white(self):
+    def set_axis_color(self,color):
         if isinstance(self.ax,np.ndarray) == False:
             axes = (self.ax,)
         else:
             axes = self.ax.flatten()
         for axis in axes:
-            axis.spines['bottom'].set_color('white')
-            axis.spines['top'].set_color('white')
-            axis.spines['left'].set_color('white')
-            axis.spines['right'].set_color('white')
-            axis.xaxis.label.set_color('white')
-            axis.yaxis.label.set_color('white')
-            axis.tick_params(axis='both',colors='white')
+            axis.spines['bottom'].set_color(color)
+            axis.spines['top'].set_color(color)
+            axis.spines['left'].set_color(color)
+            axis.spines['right'].set_color(color)
+            axis.xaxis.label.set_color(color)
+            axis.yaxis.label.set_color(color)
+            axis.tick_params(axis='both',colors=color)
 
     def clean_all(self):
         axes = np.ravel(self.ax)
@@ -185,13 +210,24 @@ class Timeline:
             animation.clean(x,clear_anims=False)
         self.x = prev_x
 
-    def animate(self,animations,easing=None,debug=False):
-        if isinstance(animations,Animation):
-            animations = (animations,)
-        self.animations = deepcopy(np.array(animations))
+    def animate(self,plot_objects,easing=None,debug=False):
+        """Render one or more plot objects into the timeline.
+
+        Parameters
+        ----------
+        plot_objects : Animation or sequence of Animation
+            a single plot object (e.g. `scatter`, `plot`, `hist`...) or a list of plot objects.
+        easing : easing
+            an easing override used while rendering.
+        debug : bool
+            if True, skip writing frame images to disk.
+        """
+        if isinstance(plot_objects,Animation):
+            plot_objects = (plot_objects,)
+        self.animations = deepcopy(np.array(plot_objects))
         
         x_max = 0
-        for animation in animations:
+        for animation in plot_objects:
             for anim in animation.anims:
                 if anim['played'] == False:
                     anim['delay'] += self.x
@@ -205,13 +241,20 @@ class Timeline:
             loop = tqdm(loop)
 
         for x in loop:
-            self.plot(animations=animations,x=x,easing=easing,debug=debug)
-        for animation in animations:
+            self.plot(animations=plot_objects,x=x,easing=easing,debug=debug)
+        for animation in plot_objects:
             for anim in animation.anims:
                 anim['played'] = True
         self.x = x_max
 
     def wait(self,duration):
+        """Pause the animation for a number of frames.
+
+        Parameters
+        ----------
+        duration : int
+            the number of frames to pause the animation for.
+        """
         if self.x == 0:
             raise UserWarning('No rendered frames, run animate with animations to generate frames !')
 
@@ -236,6 +279,23 @@ class Timeline:
         self.x += 1
     
     def save_video(self,path=None,speed=1,ffmpeg_path='ffmpeg',multialpha=False,prerendered=False,clean=True):
+        """Render the current timeline to a video file.
+
+        Parameters
+        ----------
+        path : str | None
+            the path to save the video file to.
+        speed : float
+            by default, animations are rendered at 30fps (frames per second). You can change this by setting the speed. For 60fps videos, choose speed=2.
+        ffmpeg_path : str
+             if ffmpeg is not recognised as is, you can set the path to the ffmpeg executable through this parameter.
+        multialpha : bool
+            when rendering to a transparent .mov video, if you have semi-transparent frames, can be used to get better results.
+        prerendered : bool
+            if save_video() was already called and clean was set to False, image files and the text list file associated still exist. If you want to rerender the video, without having to rerender all the frames, you can set prerendered to true, which will only run the ffmpeg command.
+        clean : bool
+            if True, image files and the text list file associated are deleted after the video has been rendered.
+        """
         if self.x == 0:
             raise UserWarning('No rendered frames, run animate with animations to generate frames !')
         if path is None:
