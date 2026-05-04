@@ -1468,6 +1468,7 @@ class scatter(plotObject):
             c = to_np_array(kwargs['c'])
             if c.ndim == 1 and (len(c) == 3 or len(c) == 4) and len(c) != len(data_x) and (c <= 1).all():
                 kwargs['c'] = c.reshape(1,-1)
+
         self.obj = self.axis.scatter(data_x,data_y,**kwargs)
 
 class plot(plotObject):
@@ -3061,6 +3062,9 @@ class hist2d(plotObject):
         if 'color' in kwargs:
             kwargs.pop('color')
 
+        data_x = np.array(data_x).flatten()
+        data_y = np.array(data_y).flatten()
+
         #Have to reset xlim and ylim because hist2d does not respect the imposed limits
         old_xlim = self.axis.get_xlim()
         old_ylim = self.axis.get_ylim()
@@ -3574,11 +3578,15 @@ class text(plotObject):
     def function(self,data_x,data_y,s,kwargs):
         if len(s) == 0:
             return
+        if isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        
         if 'fontsize' in kwargs:
             fp = FontProperties(size=kwargs['fontsize'])
+            kwargs.pop('fontsize')
         else:
             fp = FontProperties()
-        tp = TextPath((data_x, data_y), s, prop=fp)
+        tp = TextPath((0, 0), s, prop=fp)
         patch = PathPatch(tp, **kwargs)
         self.axis.add_patch(patch)
 
@@ -3591,6 +3599,7 @@ class text(plotObject):
         T = (
             transforms.Affine2D()
             .scale(sx, sy)
+            .translate(data_x, data_y)
         )
         patch.set_path(patch.get_path().transformed(T))
         self.path = patch.get_path()

@@ -1,10 +1,9 @@
 import numpy as np
 import subprocess,os,shlex,pickle
 import matplotlib.pyplot as plt
-import matplotlib
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 import warnings
 from copy import deepcopy
-matplotlib.use("Agg")
 import shutil
 try:
     has_ipython = True
@@ -286,6 +285,7 @@ class Timeline:
         for animation in plot_objects:
             if self.x >= animation.x_max and animation.persistent == False:
                 animation.clean(animation.x_max - 2, clear_anims=False)
+        plt.close()
 
     def wait(self,duration):
         """Pause the animation for a number of frames.
@@ -311,6 +311,9 @@ class Timeline:
         if debug is False:
             if os.path.isdir(self.name) == False:
                 os.makedirs(self.name)
+
+            FigureCanvasAgg(self.fig)
+
             fn = self.name + '/' + self.name +  '_{}.png'.format(self.x)
             self.fig.savefig(fn,dpi=self.dpi,transparent=self.transparent)
             
