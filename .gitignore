@@ -13,3 +13,4 @@ dist
 src/diplotocus/INFO
 INFO
 docs/build
+update.sh

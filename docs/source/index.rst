@@ -9,6 +9,12 @@ Welcome to diplotocus' documentation!
    </video>
    </center>
 
+   <center>
+   <video width="700" height="394" autoplay muted playsinline>
+       <source src="https://github.com/titanbin/Diplotocus/raw/refs/heads/main/docs/source/_static/logo.mp4" type="video/mp4">
+   </video>
+   </center>
+
 **Diplotocus** is a python package designed to render animations of `matplotlib <https://matplotlib.org/>`_ objects, in a *timeline* style.
 
 Here's a quick example of the syntax of diplotocus:
