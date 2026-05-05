@@ -6,3 +6,4 @@ matplotlib
 numpy
 svgpath2mpl
 sphinx-copybutton
+sphinx_design
