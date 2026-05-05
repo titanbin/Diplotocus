@@ -66,7 +66,7 @@ myst_all_links_external = True
 templates_path = ['_templates']
 # exclude specific generated/unused notebooks to avoid spurious warnings
 exclude_patterns = [
-    'notebooks/logo.ipynb','notebooks/index.ipynb'
+    'notebooks/index.ipynb'
 ]
 
 html_favicon = "_static/favicon.ico"
