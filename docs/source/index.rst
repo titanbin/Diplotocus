@@ -62,6 +62,7 @@ Here's a quick example of the syntax of diplotocus:
    :target: notebooks/GUI.html
 
 Get started by :doc:`Installing Diplotocus <notebooks/installation>`, and follow the :doc:`Quick-Start guide <notebooks/quick-start>`.
+For examples, see the :doc:`Examples <notebooks/examples>` page.
 
 .. toctree::
    :maxdepth: 2
