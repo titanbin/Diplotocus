@@ -498,6 +498,8 @@ class plotObject:
             the starting scale of the plot object.
         end_scale : float or tuple[float, float]
             the ending scale of the plot object.
+        center : array-like, optional
+            the (x,y) center of scale.
         duration : float
             the number of frames the animation runs from.
         delay : float, default=0
@@ -572,6 +574,8 @@ class plotObject:
             the starting angle of the rotation in radians.
         end_angle : float
             the ending angle of the rotation in radians.
+        center : array-like, optional
+            the (x,y) center of rotation.
         duration : float
             the number of frames the animation runs from.
         delay : float, default=0
