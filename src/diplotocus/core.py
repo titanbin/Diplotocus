@@ -369,8 +369,7 @@ class Timeline:
         elif is_gif:
             command = ffmpeg_path + ' -f concat -safe 0 -i {} -y -lavfi "split[s0][s1];[s0]palettegen=reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=sierra2_4a:alpha_threshold=128" -gifflags -offsetting -loop 0 -hide_banner -loglevel error {}'.format(sequence_fn,video_fn)
         else:
-            command = ffmpeg_path + ' -f concat -safe 0 -i {} -vf fps=30 -c:v libx264 -pix_fmt yuv420p -movflags +faststart -hide_banner -loglevel error -y {}'.format(sequence_fn,video_fn)
-            #command = ffmpeg_path + ' -f concat -safe 0 -i {} -c:v libx264 -pix_fmt yuv420p -c:a aac -movflags +faststart -hide_banner -loglevel error -y {}'.format(sequence_fn,video_fn)
+            command = ffmpeg_path + ' -f concat -safe 0 -i {} -c:v libx264 -pix_fmt yuv420p -c:a aac -movflags +faststart -hide_banner -loglevel error -y {}'.format(sequence_fn,video_fn)
         subprocess.run(shlex.split(command))
         if clean:
             shutil.rmtree(self.name)

@@ -59,7 +59,7 @@ Here's a quick example of the syntax of diplotocus:
 
 .. image:: _static/Web_GUI.png
    :width: 700
-   :target: notebooks/GUI
+   :target: notebooks/GUI.html
 
 Get started by :doc:`Installing Diplotocus <notebooks/installation>`, and follow the :doc:`Quick-Start guide <notebooks/quick-start>`.
 
