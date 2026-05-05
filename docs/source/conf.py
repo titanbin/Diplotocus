@@ -52,7 +52,8 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx.ext.intersphinx",
     "sphinx_autodoc_typehints",
-    "sphinx_copybutton"
+    "sphinx_copybutton",
+    "sphinx_design"
 ]
 
 intersphinx_mapping = {
@@ -93,6 +94,7 @@ html_js_files = [
 myst_enable_extensions = [
     "html_image",
     "dollarmath",
+    "colon_fence"
 ]
 
 nb_execution_allow_errors = True

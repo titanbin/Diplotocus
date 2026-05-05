@@ -72,8 +72,8 @@ class plotObject:
         kwargs['animated'] = True
         self.kwargs = kwargs
         self.kwargs = dealias(self.mpl_obj_type,self.kwargs)
-        if 'alpha' not in self.kwargs:
-            self.kwargs['alpha'] = 1
+        #if 'alpha' not in self.kwargs:
+            #self.kwargs['alpha'] = 1
 
     def function(self):
         pass
@@ -905,6 +905,8 @@ class plotObject:
             bbox = mpl.transforms.Bbox.union(bboxes)
             cx = 0.5 * (bbox.x0 + bbox.x1)
             cy = 0.5 * (bbox.y0 + bbox.y1)
+        elif self.mpl_obj_type == mpl.patches.Circle:
+            cx,cy = self.obj.get_center()
         return (cx,cy)
 
 class axis_zoom(plotObject):
@@ -1832,7 +1834,7 @@ class plot(plotObject):
             raise ValueError("x and y must be the same size")
 
     def function(self,data_x,data_y,x,kwargs):
-        if isinstance(kwargs['alpha'],np.ndarray):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
         self.obj = self.axis.plot(data_x,data_y,**kwargs)
 
@@ -1911,7 +1913,7 @@ class step(plotObject):
             raise ValueError("x and y must be the same size")
 
     def function(self,data_x,data_y,x,kwargs):
-        if isinstance(kwargs['alpha'],np.ndarray):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
         
         self.obj = self.axis.step(data_x,data_y,**kwargs)
@@ -2234,15 +2236,17 @@ class fill_betweenx(plotObject):
     def __init__(self,y,x1,x2,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.collections.FillBetweenPolyCollection
         self.mpl_plot_type = plt.fill_betweenx
+        x1 = to_np_array(x1).reshape(-1)
+        x2 = to_np_array(x2).reshape(-1)
+        if x1.size != y.size:
+            x1 = np.ones_like(y)*x1[0]
+        if x2.size != y.size:
+            x2 = np.ones_like(y)*x2[0]
+        kwargs['x1'] = x1
+        kwargs['x2'] = x2
         super().__init__(easing=easing,axis=axis,*args, **kwargs)
         self.x = to_np_array(y)
         self.y = to_np_array(y)
-        self.x1 = to_np_array(x1).reshape(-1)
-        self.x2 = to_np_array(x2).reshape(-1)
-        if self.x1.size != self.y.size:
-            self.x1 = np.ones_like(self.y)*self.x1[0]
-        if self.x2.size != self.y.size:
-            self.x2 = np.ones_like(self.y)*self.x2[0]
 
     def clean(self,x,clear_anims=True):
         if self.obj is not None and self.base_color is None:
@@ -2952,7 +2956,7 @@ class hist(plotObject):
         return self
 
     def function(self,data_x,data_y,x,kwargs):
-        if isinstance(kwargs['alpha'],np.ndarray):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
         
         if 'bins' in kwargs:
@@ -3101,7 +3105,7 @@ class hist2d(plotObject):
         self.y = to_np_array(y)
     
     def function(self,data_x,data_y,x,kwargs):
-        if isinstance(kwargs['alpha'],np.ndarray):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
         
         if 'bins' in kwargs:
@@ -3444,7 +3448,7 @@ class contourf(plotObject):
         return self
 
     def function(self,data_x,data_y,x,kwargs):
-        if isinstance(kwargs['alpha'],np.ndarray):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
         
         if 'bins' in kwargs:
@@ -3629,7 +3633,7 @@ class text(plotObject):
     def function(self,data_x,data_y,s,kwargs):
         if len(s) == 0:
             return
-        if isinstance(kwargs['alpha'],np.ndarray):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
         
         if 'fontsize' in kwargs:
@@ -3724,8 +3728,9 @@ class svg(plotObject):
         self.function(self.x, self.y, None, kwargs)
 
     def function(self,data_x,data_y,x,kwargs):
-        if isinstance(kwargs['alpha'],np.ndarray):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
+        
         if kwargs['facecolor'] is None:
             kwargs['facecolor'] = self.axis._get_lines.get_next_color()
         
@@ -3733,3 +3738,43 @@ class svg(plotObject):
             kwargs.pop('color')
 
         self.draw_svg(kwargs)
+
+class Circle(plotObject):
+    """
+
+    """
+    def __init__(self,xy,radius,easing=None,axis=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Circle
+        kwargs['x'] = xy[0]
+        kwargs['y'] = xy[1]
+        kwargs['radius'] = radius
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = xy[0]
+        self.y = xy[0]
+        self.radius = radius
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        
+        xy = (kwargs.pop('x'),kwargs.pop('y'))
+        radius = kwargs.pop('radius')
+        
+        self.obj = mpl.patches.Circle(xy,radius,**kwargs)
+        self.axis.add_patch(self.obj)
+
+class fill(plotObject):
+    def __init__(self,x,y,easing=None,axis=None,*args,**kwargs):
+        self.mpl_obj_type = mpl.patches.Polygon
+        self.mpl_plot_type = plt.fill
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+
+        self.x = to_np_array(x)
+        self.y = to_np_array(y)
+        if self.x.size != self.y.size:
+            raise ValueError("x and y must be the same size")
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        self.obj = self.axis.fill(data_x,data_y,**kwargs)[0]
