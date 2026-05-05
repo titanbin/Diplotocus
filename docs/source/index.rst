@@ -80,6 +80,7 @@ Get started by :doc:`Installing Diplotocus <notebooks/installation>`, and follow
    notebooks/easings
    notebooks/projects
    notebooks/GUI
+   notebooks/examples
 
 .. toctree::
    :maxdepth: 2

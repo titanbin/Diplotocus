@@ -138,6 +138,7 @@ class plotObject:
             return
         self.T = transforms.Affine2D()
         kwargs = self._tween(self.kwargs.copy(),x)
+        kwargs = self._math(kwargs,x)
         _x = x
         if self.x_max-self.x_min == 1:#handle 1 frame anims
             _x = self.x_max
@@ -151,11 +152,11 @@ class plotObject:
             data_x_err = to_np_array(self.xerr)
             data_y_err = to_np_array(self.yerr)
         elif self.__class__.__name__ == 'fill_between':
-            y1 = to_np_array(self.y1)
-            y2 = to_np_array(self.y2)
+            y1 = to_np_array(kwargs['y1'])
+            y2 = to_np_array(kwargs['y2'])
         elif self.__class__.__name__ == 'fill_betweenx':
-            x1 = to_np_array(self.x1)
-            x2 = to_np_array(self.x2)
+            x1 = to_np_array(kwargs['x1'])
+            x2 = to_np_array(kwargs['x2'])
 
         #First pass to get frame if sequencing
         for anim in self.anims:
@@ -410,6 +411,50 @@ class plotObject:
         self.compute_timings()
         return self
     
+    def math(self,property,func,duration,delay=0,easing=None,persistent=True):
+        """Animate a change in a property of the plot object following a given function.
+        The function will receive frames as a t parameter from 0 to 1.
+
+        Parameters
+        ----------
+        property : str
+            the name of the property to animate.
+        func : callable
+            the function to compute the property at time t (0 < t < 1).
+        duration : float
+            the number of frames the animation runs from.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        """
+        new_anim = {
+            'name':'math',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'property':property,
+            'func':func,
+            'persistent':persistent,
+            'played':False
+        }
+        self.anims.append(new_anim)
+        self.compute_timings()
+        return self
+    
+    def _math(self,kwargs,x):
+        for anim in self.anims:
+            if x < anim['delay']:
+                continue
+            if anim['name'] != 'math':
+                continue
+            _x = min(x,anim['duration'] + anim['delay'])
+            t = self.get_t_from_x(anim,_x)
+            t = np.clip(t,0,1)
+            current = anim['func'](t)
+            kwargs[anim['property']] = current
+        return kwargs
+
     def _tween(self,kwargs,x):
         for anim in self.anims:
             if x < anim['delay']:
@@ -2019,15 +2064,17 @@ class fill_between(plotObject):
     def __init__(self,x,y1,y2,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.collections.FillBetweenPolyCollection
         self.mpl_plot_type = plt.fill_between
+        y1 = to_np_array(y1).reshape(-1)
+        y2 = to_np_array(y2).reshape(-1)
+        if y1.size != x.size:
+            y1 = np.ones_like(x)*y1[0]
+        if y2.size != x.size:
+            y2 = np.ones_like(x)*y2[0]
+        kwargs['y1'] = y1
+        kwargs['y2'] = y2
         super().__init__(easing=easing,axis=axis,*args, **kwargs)
         self.x = to_np_array(x)
         self.y = to_np_array(x)
-        self.y1 = to_np_array(y1).reshape(-1)
-        self.y2 = to_np_array(y2).reshape(-1)
-        if self.y1.size != self.x.size:
-            self.y1 = np.ones_like(self.x)*self.y1[0]
-        if self.y2.size != self.x.size:
-            self.y2 = np.ones_like(self.x)*self.y2[0]
 
     def clean(self,x,clear_anims=True):
         if self.obj is not None and self.base_color is None:
