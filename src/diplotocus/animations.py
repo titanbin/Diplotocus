@@ -3741,7 +3741,12 @@ class svg(plotObject):
 
 class Circle(plotObject):
     """
+    Create a true circle at center *xy* = (*x*, *y*) with given *radius*.
 
+    Unlike `CirclePolygon` which is a polygonal approximation, this uses
+    Bezier splines and is much closer to a scale-free circle.
+
+    Valid keyword arguments are:
     """
     def __init__(self,xy,radius,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.Circle
@@ -3764,6 +3769,48 @@ class Circle(plotObject):
         self.axis.add_patch(self.obj)
 
 class fill(plotObject):
+    """
+    Plot filled polygons.
+
+    Parameters
+    ----------
+    *args : sequence of x, y, [color]
+        Each polygon is defined by the lists of *x* and *y* positions of
+        its nodes, optionally followed by a *color* specifier. See
+        :mod:`matplotlib.colors` for supported color specifiers. The
+        standard color cycle is used for polygons without a color
+        specifier.
+
+        You can plot multiple polygons by providing multiple *x*, *y*,
+        *[color]* groups.
+
+        For example, each of the following is legal::
+
+            ax.fill(x, y)                    # a polygon with default color
+            ax.fill(x, y, "b")               # a blue polygon
+            ax.fill(x, y, x2, y2)            # two polygons
+            ax.fill(x, y, "b", x2, y2, "r")  # a blue and a red polygon
+
+    data : indexable object, optional
+        An object with labelled data. If given, provide the label names to
+        plot in *x* and *y*, e.g.::
+
+            ax.fill("time", "signal",
+                    data={"time": [0, 1, 2], "signal": [0, 1, 0]})
+
+    Returns
+    -------
+    list of `~matplotlib.patches.Polygon`
+
+    Other Parameters
+    ----------------
+    **kwargs : `~matplotlib.patches.Polygon` properties
+
+    Notes
+    -----
+    Use :meth:`fill_between` if you would like to fill the region between
+    two curves.
+    """
     def __init__(self,x,y,easing=None,axis=None,*args,**kwargs):
         self.mpl_obj_type = mpl.patches.Polygon
         self.mpl_plot_type = plt.fill
