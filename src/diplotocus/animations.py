@@ -3741,17 +3741,16 @@ class svg(plotObject):
 
 class Circle(plotObject):
     """
+    A circle patch.
+
     Create a true circle at center *xy* = (*x*, *y*) with given *radius*.
 
     Unlike `CirclePolygon` which is a polygonal approximation, this uses
     Bezier splines and is much closer to a scale-free circle.
-
-    Valid keyword arguments are:
     """
     def __init__(self,xy,radius,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.Circle
-        kwargs['x'] = xy[0]
-        kwargs['y'] = xy[1]
+        kwargs['xy'] = xy
         kwargs['radius'] = radius
         super().__init__(easing=easing,axis=axis,*args, **kwargs)
         self.x = xy[0]
@@ -3762,10 +3761,7 @@ class Circle(plotObject):
         if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
         
-        xy = (kwargs.pop('x'),kwargs.pop('y'))
-        radius = kwargs.pop('radius')
-        
-        self.obj = mpl.patches.Circle(xy,radius,**kwargs)
+        self.obj = mpl.patches.Circle(**kwargs)
         self.axis.add_patch(self.obj)
 
 class fill(plotObject):
@@ -3825,3 +3821,407 @@ class fill(plotObject):
         if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
         self.obj = self.axis.fill(data_x,data_y,**kwargs)[0]
+
+class Annulus(plotObject):
+    """
+    An elliptical annulus.
+
+    Parameters
+    ----------
+    xy : (float, float)
+        xy coordinates of annulus centre.
+    r : float or (float, float)
+        The radius, or semi-axes:
+
+        - If float: radius of the outer circle.
+        - If two floats: semi-major and -minor axes of outer ellipse.
+    width : float
+        Width (thickness) of the annular ring. The width is measured inward
+        from the outer ellipse so that for the inner ellipse the semi-axes
+        are given by ``r - width``. *width* must be less than or equal to
+        the semi-minor axis.
+    angle : float, default: 0
+        Rotation angle in degrees (anti-clockwise from the positive
+        x-axis). Ignored for circular annuli (i.e., if *r* is a scalar).
+    """
+    def __init__(self,xy,r,width,angle=0.0,easing=None,axis=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Circle
+        kwargs['xy'] = xy
+        kwargs['r'] = r
+        kwargs['width'] = width
+        kwargs['angle'] = angle
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = xy[0]
+        self.y = xy[0]
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        
+        self.obj = mpl.patches.Annulus(**kwargs)
+        self.axis.add_patch(self.obj)
+
+class Arc(plotObject):
+    """
+    An elliptical arc, i.e. a segment of an ellipse.
+
+    Due to internal optimizations, the arc cannot be filled.
+
+    Parameters
+    ----------
+    xy : (float, float)
+        The center of the ellipse.
+
+    width : float
+        The length of the horizontal axis.
+
+    height : float
+        The length of the vertical axis.
+
+    angle : float
+        Rotation of the ellipse in degrees (counterclockwise).
+
+    theta1, theta2 : float, default: 0, 360
+        Starting and ending angles of the arc in degrees. These values
+        are relative to *angle*, e.g. if *angle* = 45 and *theta1* = 90
+        the absolute starting angle is 135.
+        Default *theta1* = 0, *theta2* = 360, i.e. a complete ellipse.
+        The arc is drawn in the counterclockwise direction.
+        Angles greater than or equal to 360, or smaller than 0, are
+        represented by an equivalent angle in the range [0, 360), by
+        taking the input value mod 360.
+
+    Other Parameters
+    ----------------
+    **kwargs : `~matplotlib.patches.Patch` properties
+        Most `.Patch` properties are supported as keyword arguments,
+        except *fill* and *facecolor* because filling is not supported.
+    """
+    def __init__(self,xy,width,height,angle=0.0,theta1=0.0,theta2=360.0,easing=None,axis=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Circle
+        kwargs['x'] = xy[0]
+        kwargs['y'] = xy[1]
+        kwargs['width'] = width
+        kwargs['height'] = height
+        kwargs['angle'] = angle
+        kwargs['theta1'] = theta1
+        kwargs['theta2'] = theta2
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = xy[0]
+        self.y = xy[0]
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        
+        if isinstance(kwargs['theta1'],np.ndarray):
+            kwargs['theta1'] = kwargs['theta1'][0]
+        if isinstance(kwargs['theta2'],np.ndarray):
+            kwargs['theta2'] = kwargs['theta2'][0]
+        
+        self.obj = mpl.patches.Arc(xy=(kwargs.pop('x'),kwargs.pop('y')),**kwargs)
+        self.axis.add_patch(self.obj)
+
+class Arrow(plotObject):
+    """
+    An arrow patch.
+
+    Draws an arrow from (*x*, *y*) to (*x* + *dx*, *y* + *dy*).
+    The width of the arrow is scaled by *width*.
+
+    Parameters
+    ----------
+    x : float
+        x coordinate of the arrow tail.
+    y : float
+        y coordinate of the arrow tail.
+    dx : float
+        Arrow length in the x direction.
+    dy : float
+        Arrow length in the y direction.
+    width : float, default: 1
+        Scale factor for the width of the arrow. With a default value of 1,
+        the tail width is 0.2 and head width is 0.6.
+    **kwargs
+        Keyword arguments control the `Patch` properties:
+
+        %(Patch:kwdoc)s
+
+    See Also
+    --------
+    FancyArrow
+        Patch that allows independent control of the head and tail
+        properties.
+    """
+    def __init__(self,x,y,dx,dy,width=1.0,easing=None,axis=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Circle
+        kwargs['x'] = x
+        kwargs['y'] = y
+        kwargs['dx'] = dx
+        kwargs['dy'] = dy
+        kwargs['width'] = width
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = x
+        self.y = y
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        
+        self.obj = mpl.patches.Arrow(**kwargs)
+        self.axis.add_patch(self.obj)
+
+class Ellipse(plotObject):
+    """
+    A scale-free ellipse.
+
+    Parameters
+    ----------
+    xy : (float, float)
+        xy coordinates of ellipse centre.
+    width : float
+        Total length (diameter) of horizontal axis.
+    height : float
+        Total length (diameter) of vertical axis.
+    angle : float, default: 0
+        Rotation in degrees anti-clockwise.
+    """
+    def __init__(self,xy,width,height,angle=0,easing=None,axis=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Circle
+        kwargs['xy'] = xy
+        kwargs['width'] = width
+        kwargs['height'] = height
+        kwargs['angle'] = angle
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = xy[0]
+        self.y = xy[1]
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        
+        self.obj = mpl.patches.Ellipse(**kwargs)
+        self.axis.add_patch(self.obj)
+
+class FancyArrow(plotObject):
+    """
+    Like Arrow, but lets you set head width and head height independently.
+
+    Parameters
+    ----------
+    x, y : float
+        The x and y coordinates of the arrow base.
+
+    dx, dy : float
+        The length of the arrow along x and y direction.
+
+    width : float, default: 0.001
+        Width of full arrow tail.
+
+    length_includes_head : bool, default: False
+        True if head is to be counted in calculating the length.
+
+    head_width : float or None, default: 3*width
+        Total width of the full arrow head.
+
+    head_length : float or None, default: 1.5*head_width
+        Length of arrow head.
+
+    shape : {'full', 'left', 'right'}, default: 'full'
+        Draw the left-half, right-half, or full arrow.
+
+    overhang : float, default: 0
+        Fraction that the arrow is swept back (0 overhang means
+        triangular shape). Can be negative or greater than one.
+
+    head_starts_at_zero : bool, default: False
+        If True, the head starts being drawn at coordinate 0
+        instead of ending at coordinate 0.
+    """
+    def __init__(self,x,y,dx,dy,width=0.001,
+                 length_includes_head=False,head_width=None,head_length=None,
+                 shape='full',overhang=0,head_starts_at_zero=False,
+                 easing=None,axis=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Circle
+        kwargs['x'] = x
+        kwargs['y'] = y
+        kwargs['dx'] = dx
+        kwargs['dy'] = dy
+        kwargs['width'] = width
+        kwargs['length_includes_head'] = length_includes_head
+        kwargs['head_width'] = head_width
+        kwargs['head_length'] = head_length
+        kwargs['shape'] = shape
+        kwargs['overhang'] = overhang
+        kwargs['head_starts_at_zero'] = head_starts_at_zero
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = x
+        self.y = y
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        
+        if isinstance(kwargs['width'],np.ndarray):
+            kwargs['width'] = kwargs['width'][0]
+        if isinstance(kwargs['head_width'],np.ndarray):
+            kwargs['head_width'] = kwargs['head_width'][0]
+        if isinstance(kwargs['head_length'],np.ndarray):
+            kwargs['head_length'] = kwargs['head_length'][0]
+
+        self.obj = mpl.patches.FancyArrow(**kwargs)
+        self.axis.add_patch(self.obj)
+
+class Polygon(plotObject):
+    """
+    A general polygon patch.
+
+    Parameters
+    ----------
+    xy : (N, 2) array
+
+    closed : bool, default: True
+        Whether the polygon is closed (i.e., has identical start and end
+        points).
+    """
+    def __init__(self,xy,closed=True,easing=None,axis=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Circle
+        kwargs['xy'] = xy
+        kwargs['closed'] = closed
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = xy[0]
+        self.y = xy[1]
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+        
+        self.obj = mpl.patches.Polygon(**kwargs)
+        self.axis.add_patch(self.obj)
+
+class Rectangle(plotObject):
+    """
+    A rectangle defined via an anchor point *xy* and its *width* and *height*.
+
+    The rectangle extends from ``xy[0]`` to ``xy[0] + width`` in x-direction
+    and from ``xy[1]`` to ``xy[1] + height`` in y-direction. ::
+
+      :                +------------------+
+      :                |                  |
+      :              height               |
+      :                |                  |
+      :               (xy)---- width -----+
+
+    One may picture *xy* as the bottom left corner, but which corner *xy* is
+    actually depends on the direction of the axis and the sign of *width*
+    and *height*; e.g. *xy* would be the bottom right corner if the x-axis
+    was inverted or if *width* was negative.
+
+    Parameters
+    ----------
+    xy : (float, float)
+        The anchor point.
+    width : float
+        Rectangle width.
+    height : float
+        Rectangle height.
+    angle : float, default: 0
+        Rotation in degrees anti-clockwise about the rotation point.
+    rotation_point : {'xy', 'center', (number, number)}, default: 'xy'
+        If ``'xy'``, rotate around the anchor point. If ``'center'`` rotate
+        around the center. If 2-tuple of number, rotate around this
+        coordinate.
+    """
+    def __init__(self,xy,width,height,angle=0.0,rotation_point='xy',easing=None,axis=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Circle
+        kwargs['xy'] = xy
+        kwargs['width'] = width
+        kwargs['height'] = height
+        kwargs['angle'] = angle
+        kwargs['rotation_point'] = rotation_point
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = xy[0]
+        self.y = xy[1]
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+
+        if isinstance(kwargs['width'],np.ndarray):
+            kwargs['width'] = kwargs['width'][0]
+        if isinstance(kwargs['height'],np.ndarray):
+            kwargs['height'] = kwargs['height'][0]
+        
+        self.obj = mpl.patches.Rectangle(**kwargs)
+        self.axis.add_patch(self.obj)
+
+class RegularPolygon(plotObject):
+    """
+    A regular polygon patch.
+
+    Parameters
+    ----------
+    xy : (float, float)
+        The center position.
+
+    numVertices : int
+        The number of vertices.
+
+    radius : float
+        The distance from the center to each of the vertices.
+
+    orientation : float
+        The polygon rotation angle (in radians).
+    """
+    def __init__(self,xy,numVertices,radius=5,orientation=0,easing=None,axis=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Circle
+        kwargs['xy'] = xy
+        kwargs['numVertices'] = numVertices
+        kwargs['radius'] = radius
+        kwargs['orientation'] = orientation
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = xy[0]
+        self.y = xy[1]
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+
+        if isinstance(kwargs['numVertices'],np.ndarray):
+            kwargs['numVertices'] = kwargs['numVertices'][0]
+        kwargs['numVertices'] = max(1,int(kwargs['numVertices']))
+
+        self.obj = mpl.patches.RegularPolygon(**kwargs)
+        self.axis.add_patch(self.obj)
+
+class Wedge(plotObject):
+    """
+    Wedge shaped patch.
+
+    A wedge centered at *x*, *y* center with radius *r* that
+    sweeps *theta1* to *theta2* (in degrees).  If *width* is given,
+    then a partial wedge is drawn from inner radius *r* - *width*
+    to outer radius *r*.
+    """
+    def __init__(self,center,r,theta1,theta2,width=None,easing=None,axis=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.Circle
+        kwargs['center'] = center
+        kwargs['r'] = r
+        kwargs['theta1'] = theta1
+        kwargs['theta2'] = theta2
+        kwargs['width'] = width
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = center[0]
+        self.y = center[1]
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+
+        if isinstance(kwargs['theta1'],np.ndarray):
+            kwargs['theta1'] = kwargs['theta1'][0]
+        if isinstance(kwargs['theta2'],np.ndarray):
+            kwargs['theta2'] = kwargs['theta2'][0]
+
+        self.obj = mpl.patches.Wedge(**kwargs)
+        self.axis.add_patch(self.obj)
