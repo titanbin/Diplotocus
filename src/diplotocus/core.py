@@ -88,10 +88,14 @@ class Timeline:
         if True, any message will not be printed, and no progress bar will be shown.
     dpi : int
         The DPI of the rendered images (higher = better resolution/slower render).
+    bbox_inches : str or Bbox, optional
+        Bbox in inches. Only the given portion of the figure is saved. If 'tight', try to figure out the tight bbox of the figure. If None, use savefig.bbox
     transparent : bool
         if True, the background color of the Figure and axes will be transparent. Can be used to render a transparent video (only compatible with a .mov video file).
     axis_color : str
-        if True, changes the color of the axes, ticks and labels to the specified color.
+        Sets the color of the axes, ticks and labels to the specified color.
+    fig_color : str
+        Sets the color of the figure to the specified color.
     noaxis : bool
         if True, hides the axis lines, ticks and labels.
     easing : easing
@@ -106,8 +110,10 @@ class Timeline:
                  fig=None,
                  quiet=False,
                  dpi=200,
+                 bbox_inches=None,
                  transparent=False,
                  axis_color='k',
+                 fig_color='w',
                  noaxis=False,
                  easing=easeLinear(),
                  xlim=None,
@@ -139,6 +145,7 @@ class Timeline:
         self.name = name
         self.quiet = quiet
         self.dpi = dpi
+        self.bbox_inches = bbox_inches
         self.easing = easing
         self.x = 0
         self.timeline_str = ''
@@ -149,6 +156,8 @@ class Timeline:
             self.full_path = '/'.join(namespace.split('/')[:-1])
         if axis_color != 'k':
             self.set_axis_color(axis_color)
+        if fig_color != 'w':
+            self.set_fig_color(fig_color)
         if noaxis:
             self.main_axis.set_axis_off()
 
@@ -161,14 +170,30 @@ class Timeline:
             Axis to set as default
         """
         self.main_axis = ax
+    
+    def set_fig_color(self,color):
+        """Set the color of figure
+
+        Parameters
+        ----------
+        color : color or array-like
+            The color to set the figure to
+        """
+        self.fig.patch.set_facecolor(color)
+        if isinstance(self.ax,np.ndarray) == False:
+            axes = (self.ax,)
+        else:
+            axes = self.ax.flatten()
+        for axis in axes:
+            axis.set_facecolor(color)
 
     def set_axis_color(self,color):
         """Set the color of axes
 
         Parameters
         ----------
-        color : color or array-like, optional
-            The color to set the axes
+        color : color or array-like
+            The color to set the axes to
         """
         if isinstance(self.ax,np.ndarray) == False:
             axes = (self.ax,)
@@ -202,7 +227,7 @@ class Timeline:
                     if p.get_animated():
                         p.remove()
 
-    def plot(self,plot_objects,x=0,easing=None,debug=False):
+    def plot(self,plot_objects,x=0,easing=None):
         if isinstance(plot_objects,plotObject):
             plot_objects = (plot_objects,)
 
@@ -241,12 +266,12 @@ class Timeline:
                 plot_object.apply(x,easing)
         prev_x = self.x
         self.x = x
-        self.save_plot(debug)
+        self.save_plot()
         for plot_object in plot_objects:
             plot_object.clean(x,clear_anims=False)
         self.x = prev_x
 
-    def animate(self,plot_objects,easing=None,debug=False):
+    def animate(self,plot_objects,easing=None):
         """Render one or more plot objects into the timeline.
 
         Parameters
@@ -277,7 +302,7 @@ class Timeline:
             loop = tqdm(loop)
 
         for x in loop:
-            self.plot(plot_objects=plot_objects,x=x,easing=easing,debug=debug)
+            self.plot(plot_objects=plot_objects,x=x,easing=easing)
         for animation in plot_objects:
             for anim in animation.anims:
                 anim['played'] = True
@@ -307,18 +332,17 @@ class Timeline:
             self.timeline_str += 'duration {}\n'.format(1/30)
             self.x += 1
 
-    def save_plot(self,debug):
-        if debug is False:
-            if os.path.isdir(self.name) == False:
-                os.makedirs(self.name)
+    def save_plot(self):
+        if os.path.isdir(self.name) == False:
+            os.makedirs(self.name)
 
-            FigureCanvasAgg(self.fig)
+        FigureCanvasAgg(self.fig)
 
-            fn = self.name + '/' + self.name +  '_{}.png'.format(self.x)
-            self.fig.savefig(fn,dpi=self.dpi,transparent=self.transparent)
-            
-            self.timeline_str += 'file \'' + self.name + '_{}.png\'\n'.format(self.x)
-            self.timeline_str += 'duration {}\n'.format(1/30)
+        fn = self.name + '/' + self.name +  '_{}.png'.format(self.x)
+        self.fig.savefig(fn,dpi=self.dpi,transparent=self.transparent,bbox_inches=self.bbox_inches)
+        
+        self.timeline_str += 'file \'' + self.name + '_{}.png\'\n'.format(self.x)
+        self.timeline_str += 'duration {}\n'.format(1/30)
         self.x += 1
     
     def save_video(self,path=None,speed=1,ffmpeg_path='ffmpeg',multialpha=False,prerendered=False,clean=True):

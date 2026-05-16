@@ -72,8 +72,6 @@ class plotObject:
         kwargs['animated'] = True
         self.kwargs = kwargs
         self.kwargs = dealias(self.mpl_obj_type,self.kwargs)
-        #if 'alpha' not in self.kwargs:
-            #self.kwargs['alpha'] = 1
 
     def function(self):
         pass
@@ -145,18 +143,19 @@ class plotObject:
         self.anim_function(_x,kwargs)
         self.check_transforms(x)
 
+    def resize_kwargs(self,kwargs,idx):
+        for key in kwargs:
+            kwarg = kwargs[key]
+            if isinstance(kwarg,(list,np.ndarray)) and len(kwarg) == len(self.x):
+                if idx is None:
+                    kwargs[key] = to_np_array([])
+                else:
+                    kwargs[key] = to_np_array(kwarg)[idx]
+        return kwargs
+
     def anim_function(self,x,kwargs):
         data_x = to_np_array(self.x)
         data_y = to_np_array(self.y)
-        if self.__class__.__name__ == 'errorbar':
-            data_x_err = to_np_array(self.xerr)
-            data_y_err = to_np_array(self.yerr)
-        elif self.__class__.__name__ == 'fill_between':
-            y1 = to_np_array(kwargs['y1'])
-            y2 = to_np_array(kwargs['y2'])
-        elif self.__class__.__name__ == 'fill_betweenx':
-            x1 = to_np_array(kwargs['x1'])
-            x2 = to_np_array(kwargs['x2'])
 
         #First pass to get frame if sequencing
         for anim in self.anims:
@@ -166,7 +165,6 @@ class plotObject:
                 continue
             if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                 continue
-
             t = self.get_t_from_x(anim,x)
 
             if len(data_x.shape) == 1:
@@ -176,16 +174,7 @@ class plotObject:
             _i = max(min(round(t*len(data_x)),len(data_x)-1),0)
             data_x = data_x[_i]
             data_y = data_y[_i]
-            
-            if self.__class__.__name__ == 'errorbar':
-                data_x_err = data_x_err[_i]
-                data_y_err = data_y_err[_i]
-            elif self.__class__.__name__ == 'fill_between':
-                y1 = y1[_i]
-                y2 = y2[_i]
-            elif self.__class__.__name__ == 'fill_betweenx':
-                x1 = x1[_i]
-                x2 = x2[_i]
+            kwargs = self.resize_kwargs(kwargs,_i)
 
         #Second pass to cut points if drawing or erasing
         i_max = -1
@@ -213,31 +202,11 @@ class plotObject:
             data_x = data_x[:i_max]
             if data_y is not None:
                 data_y = data_y[:i_max]
-            if self.__class__.__name__ == 'errorbar':
-                data_x_err = data_x_err[:i_max]
-                data_y_err = data_y_err[:i_max]
-            elif self.__class__.__name__ == 'fill_between':
-                y1 = y1[:i_max]
-                y2 = y2[:i_max]
-            elif self.__class__.__name__ == 'fill_betweenx':
-                x1 = x1[:i_max]
-                x2 = x2[:i_max]
-            if 'c' in kwargs and isinstance(kwargs['c'],(list,np.ndarray)):
-                kwargs['c'] = kwargs['c'][:i_max]
+            kwargs = self.resize_kwargs(kwargs,list(range(i_max)))
         elif i_max == 0:
             data_x = []
             data_y = []
-            if self.__class__.__name__ == 'errorbar':
-                data_x_err = []
-                data_y_err = []
-            elif self.__class__.__name__ == 'fill_between':
-                y1 = []
-                y2 = []
-            elif self.__class__.__name__ == 'fill_betweenx':
-                x1 = []
-                x2 = []
-            if 'c' in kwargs and isinstance(kwargs['c'],(list,np.ndarray)):
-                kwargs['c'] = []
+            kwargs = self.resize_kwargs(kwargs,None)
 
         #Third pass to morph
         for anim in self.anims:
@@ -264,21 +233,27 @@ class plotObject:
             if self.__class__.__name__ == 'errorbar':
                 new_data_x_err = []
                 new_data_y_err = []
-                for i in range(len(data_x_err)):
-                    new_data_x_err.append(data_x_err[i] + (anim['new_x_err'][i] - data_x_err[i])*t)
-                    new_data_y_err.append(data_y_err[i] + (anim['new_y_err'][i] - data_y_err[i])*t)
-                data_x_err = new_data_x_err
-                data_y_err = new_data_y_err
-        
-        if self.__class__.__name__ == 'errorbar':
-            kwargs['xerr'] = data_x_err
-            kwargs['yerr'] = data_y_err
-        elif self.__class__.__name__ == 'fill_between':
-            kwargs['y1'] = y1
-            kwargs['y2'] = y2
-        elif self.__class__.__name__ == 'fill_betweenx':
-            kwargs['x1'] = x1
-            kwargs['x2'] = x2
+                for i in range(len(kwargs['xerr'])):
+                    new_data_x_err.append(kwargs['xerr'][i] + (anim['new_x_err'][i] - kwargs['xerr'][i])*t)
+                    new_data_y_err.append(kwargs['yerr'][i] + (anim['new_y_err'][i] - kwargs['yerr'][i])*t)
+                kwargs['xerr'] = new_data_x_err
+                kwargs['xerr'] = new_data_y_err
+            elif self.__class__.__name__ == 'fill_between':
+                new_y1 = []
+                new_y2 = []
+                for i in range(len(kwargs['y1'])):
+                    new_y1.append(kwargs['y1'][i] + (anim['new_y1'][i] - kwargs['y1'][i])*t)
+                    new_y2.append(kwargs['y2'][i] + (anim['new_y2'][i] - kwargs['y2'][i])*t)
+                kwargs['y1'] = new_y1
+                kwargs['y2'] = new_y2
+            elif self.__class__.__name__ == 'fill_betweenx':
+                new_x1 = []
+                new_x2 = []
+                for i in range(len(kwargs['x1'])):
+                    new_x1.append(kwargs['x1'][i] + (anim['new_x1'][i] - kwargs['x1'][i])*t)
+                    new_x2.append(kwargs['x2'][i] + (anim['new_x2'][i] - kwargs['x2'][i])*t)
+                kwargs['x1'] = new_x1
+                kwargs['x2'] = new_x2
 
         data_x = to_np_array(data_x)
         data_y = to_np_array(data_y)
@@ -506,7 +481,7 @@ class plotObject:
         """
         return self.tween('alpha',start=1,end=0,duration=duration,delay=delay,easing=easing,persistent=persistent)
     
-    def draw(self,duration,reverse=False,delay=0,easing=None,persistent=True):
+    def draw(self,duration,reverse=False,sort=None,delay=0,easing=None,persistent=True):
         """Animate the plot object by sequentially adding more points of the dataset.
 
         Parameters
@@ -519,9 +494,22 @@ class plotObject:
             the easing used for this animation. If None, a linear easing is applied.
         reverse : bool, default=False
             if True, removes points sequentially instead of adding points.
+        sort : str, default=None
+            sorts the data to draw it in order. Can be 'x','-x','y','-y' to sort in ascending or descending order.
         persistent : bool, default=True
             if True, the plot object will continue to be plotted after its last animation has played.
         """
+        if sort is not None:
+            if sort[-1] == 'x':
+                idx = np.argsort(self.x)
+            else:
+                idx = np.argsort(self.y)
+            if sort[0] == '-':
+                idx = idx[::-1]
+            self.x = self.x[idx]
+            self.y = self.y[idx]
+            self.kwargs = self.resize_kwargs(self.kwargs,idx)
+
         self.anims.append({
             'name':'draw',
             'duration':duration,
@@ -658,7 +646,7 @@ class plotObject:
         )
         
         obj = to_np_array(self.obj)
-        for o in obj:            
+        for o in obj:
             if isinstance(o, mpl.collections.Collection) and self.mpl_obj_type == mpl.collections.Collection:
                 offsets = np.asarray(o.get_offsets(), dtype=float).reshape(-1, 2)
                 offsets_centered = offsets - np.array([cx, cy])
@@ -1065,6 +1053,63 @@ class axis_move(plotObject):
         height = self.axis.get_ylim()[1]-self.axis.get_ylim()[0]
         pos_x = anim['start'][0] + (anim['end'][0] - anim['start'][0])*t
         pos_y = anim['start'][1] + (anim['end'][1] - anim['start'][1])*t
+        self.axis.set_xlim(pos_x-width/2,pos_x+width/2)
+        self.axis.set_ylim(pos_y-height/2,pos_y+height/2)
+
+class axis_track(plotObject):
+    """
+    Tracks a plot object over time.
+
+    Parameters
+    ----------
+    object : plotObject
+        The object to track
+    duration : float
+        Duration of the animation
+    delay : float, default=0
+        Delay before starting
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
+
+    Note
+    ----
+    Because it needs its tracking object center each frame, axis_track() has to be added after its
+    tracking object in the Timeline animate() method.
+    """
+    def __init__(self,obj,duration,delay=0,easing=None,axis=None,*args,**kwargs):
+        self.track_obj = obj
+        super().__init__(axis=axis,*args, **kwargs)
+        self.anims = [{
+            'name':'axis_track',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'persistent':True,
+            'obj':obj,
+            'played':False
+        }]
+        self.compute_timings()
+
+    def function(self,data_x,data_y,x,kwargs):
+        if self.track_obj.obj is None:
+            raise UserWarning('axis_track should be added after its tracking object in animate()!')
+        anim = self.anims[0]
+        if x < anim['delay'] or x > anim['duration'] + anim['delay'] -1:
+            return
+        t = self.get_t_from_x(anim,x)
+        width  = self.axis.get_xlim()[1]-self.axis.get_xlim()[0]
+        height = self.axis.get_ylim()[1]-self.axis.get_ylim()[0]
+        
+        _c = self.track_obj.get_center()
+        if self.track_obj.obj is not None and self.track_obj.mpl_obj_type != mpl.collections.Collection:
+            obj = self.track_obj.obj
+            artist = obj[0] if isinstance(obj, (list, tuple, np.ndarray)) else obj
+            c_disp = artist.get_transform().transform((0,0))
+            _c = self.axis.transData.inverted().transform(c_disp)
+
+        pos_x, pos_y = _c
         self.axis.set_xlim(pos_x-width/2,pos_x+width/2)
         self.axis.set_ylim(pos_y-height/2,pos_y+height/2)
 
@@ -2084,6 +2129,31 @@ class fill_between(plotObject):
             if 'facecolor' not in self.kwargs:
                 self.kwargs['facecolor'] = self.base_color
         super().clean(x,clear_anims)
+
+    def morph(self,new_x,duration,new_y1=None,new_y2=None,delay=0,easing=None,persistent=True):
+        if new_y1 is None:
+            new_y1 = self.y1
+        if new_y2 is None:
+            new_y2 = self.y2
+        if isinstance(new_x,numbers.Number):
+            new_x = [new_x]
+            new_y1 = [new_y1]
+            new_y2 = [new_y2]
+        
+        self.anims.append({
+            'name':'morph',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'new_x':new_x,
+            'new_y':new_x,
+            'new_y1':new_y1,
+            'new_y2':new_y2,
+            'persistent':persistent,
+            'played':False
+        })
+        self.compute_timings()
+        return self
     
     def function(self,data_x,data_y,x,kwargs):
         self.obj = self.axis.fill_between(x=data_x,**kwargs)
@@ -2255,6 +2325,31 @@ class fill_betweenx(plotObject):
                 self.kwargs['facecolor'] = self.base_color
         super().clean(x,clear_anims)
     
+    def morph(self,new_y,duration,new_x1=None,new_x2=None,delay=0,easing=None,persistent=True):
+        if new_x1 is None:
+            new_x1 = self.x1
+        if new_x2 is None:
+            new_x2 = self.x2
+        if isinstance(new_y,numbers.Number):
+            new_y = [new_y]
+            new_x1 = [new_x1]
+            new_x2 = [new_x2]
+        
+        self.anims.append({
+            'name':'morph',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'new_x':new_y,
+            'new_y':new_y,
+            'new_x1':new_x1,
+            'new_x2':new_x2,
+            'persistent':persistent,
+            'played':False
+        })
+        self.compute_timings()
+        return self
+
     def function(self,data_x,data_y,x,kwargs):
         self.obj = self.axis.fill_betweenx(y=data_x,**kwargs)
     
@@ -2671,13 +2766,15 @@ class errorbar(plotObject):
     def __init__(self,x,y,xerr=None,yerr=None,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.lines.Line2D
         self.mpl_plot_type = plt.axvline
-        super().__init__(easing=easing,axis=axis,*args, **kwargs)
-        self.x = x
-        self.y = y
         if xerr is None:
             xerr = np.zeros_like(x)
         if yerr is None:
             yerr = np.zeros_like(y)
+        kwargs['xerr'] = xerr
+        kwargs['yerr'] = yerr
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = x
+        self.y = y
         self.xerr = xerr
         self.yerr = yerr
 
@@ -3490,20 +3587,13 @@ class text(plotObject):
         The position to place the text. By default, this is in data
         coordinates. The coordinate system can be changed using the
         *transform* parameter.
-
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
-    easing : callable, optional
-        Easing function
-    axis : matplotlib.axes.Axes, optional
-        Axis to plot on
-
-
     s : str
         The text.
-
+    eval : bool
+        If True, the string  will get evaluated through eval() each frame.
+        This can be used to display the frame number, by including
+        '{_dpl_frame}' in the string. This will run arbitrary code,
+        so refrain from running code you have not written yourself.
     fontdict : dict, default: None
 
         .. admonition:: Discouraged
@@ -3514,6 +3604,14 @@ class text(plotObject):
 
         A dictionary to override the default text properties. If fontdict
         is None, the defaults are determined by `.rcParams`.
+    duration : float
+        Duration of the animation
+    delay : float, default=0
+        Delay before starting
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
 
     Returns
     -------
@@ -3602,13 +3700,16 @@ class text(plotObject):
 
         >>> text(x, y, s, bbox=dict(facecolor='red', alpha=0.5))
     """
-    def __init__(self,x,y,string,easing=None,axis=None, *args, **kwargs):
+    def __init__(self,x,y,string,eval=False,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.PathPatch
         self.mpl_plot_type = plt.text
         super().__init__(easing=easing,axis=axis,*args, **kwargs)
         self.x = x
         self.y = y
         self.string = string
+        self.eval = eval
+        self.initial_sx = None
+        self.initial_sy = None
 
     def anim_function(self,x,kwargs):
         s = self.string
@@ -3627,14 +3728,48 @@ class text(plotObject):
                 else:
                     i_max = min(round(t*len(s)),len(s))
                 s = s[:i_max]
-        
-        self.function(self.x,self.y,s,kwargs)
 
-    def function(self,data_x,data_y,s,kwargs):
+        data_x = self.x
+        data_y = self.y
+        for anim in self.anims:
+            if anim['name'] != 'morph':
+                continue
+            if self.x is None:
+                continue
+            if x < anim['delay'] or x > anim['delay'] + anim['duration']:
+                continue
+            t = self.get_t_from_x(anim,x)
+
+            data_x = data_x + (anim['new_x'] - data_x)*t
+            data_y = data_y + (anim['new_y'] - data_y)*t
+
+        kwargs['string'] = s
+
+        self.function(data_x,data_y,x,kwargs)
+
+    def init(self):
+        if self.initial_sx is None:
+            px_per_pt = self.axis.get_figure().dpi / 72.0
+            initial_dx_per_px = (self.axis.get_xlim()[1] - self.axis.get_xlim()[0]) / self.axis.bbox.width
+            initial_dy_per_px = (self.axis.get_ylim()[1] - self.axis.get_ylim()[0]) / self.axis.bbox.height
+            self.initial_sx = px_per_pt * initial_dx_per_px
+            self.initial_sy = px_per_pt * initial_dy_per_px
+
+    def function(self,data_x,data_y,x,kwargs):
+        s = kwargs.pop('string')
         if len(s) == 0:
             return
+        if self.eval:
+            _dpl_frame = x
+            s = eval(f'f"""{s}"""')
         if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
+        if 'ec' not in kwargs and 'edgecolor' not in kwargs:
+            kwargs['ec'] = None
+        if 'lw' not in kwargs and 'linewidth' not in kwargs:
+            kwargs['lw'] = 0
+        if ('fc' not in kwargs and 'facecolor' not in kwargs) and 'color' in kwargs:
+            kwargs['fc'] = kwargs.pop('color')
         
         if 'fontsize' in kwargs:
             fp = FontProperties(size=kwargs['fontsize'])
@@ -3645,12 +3780,8 @@ class text(plotObject):
         patch = PathPatch(tp, **kwargs)
         self.axis.add_patch(patch)
 
-        px_per_pt = self.axis.get_figure().dpi / 72.0
-        dx_per_px = (self.axis.get_xlim()[1] - self.axis.get_xlim()[0]) / self.axis.bbox.width
-        dy_per_px = (self.axis.get_ylim()[1] - self.axis.get_ylim()[0]) / self.axis.bbox.height
-        sx = px_per_pt * dx_per_px
-        sy = px_per_pt * dy_per_px
-
+        sx = self.initial_sx
+        sy = self.initial_sy
         T = (
             transforms.Affine2D()
             .scale(sx, sy)
