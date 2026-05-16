@@ -3776,14 +3776,49 @@ class text(plotObject):
             kwargs.pop('fontsize')
         else:
             fp = FontProperties()
+
+        if "ha" in kwargs:
+            ha = kwargs.pop('ha')
+        elif "horizontalalignment" in kwargs:
+            ha = kwargs.pop('horizontalalignment')
+        else:
+            ha = 'left'
+        if "va" in kwargs:
+            va = kwargs.pop('va')
+        elif "verticalalignment" in kwargs:
+            va = kwargs.pop('verticalalignment')
+        else:
+            va = 'baseline'
+
         tp = TextPath((0, 0), s, prop=fp)
-        patch = PathPatch(tp, **kwargs)
-        self.axis.add_patch(patch)
 
         sx = self.initial_sx
         sy = self.initial_sy
+
+        bbox = tp.get_extents()
+
+        if ha == "center":
+            dx = -(bbox.x0 + bbox.x1) / 2
+        elif ha == "right":
+            dx = -bbox.x1
+        else:
+            dx = -bbox.x0
+
+        if va == "center":
+            dy = -(bbox.y0 + bbox.y1) / 2
+        elif va == "top":
+            dy = -bbox.y1
+        elif va == "bottom":
+            dy = -bbox.y0
+        else:
+            dy = 0
+
+        patch = PathPatch(tp, **kwargs)
+        self.axis.add_patch(patch)
+
         T = (
             transforms.Affine2D()
+            .translate(dx, dy)
             .scale(sx, sy)
             .translate(data_x, data_y)
         )
