@@ -789,7 +789,8 @@ class plotObject:
                 self.x = anim['new_x']
                 self.y = anim['new_y']
 
-        if x >= self.x_min-1 and x < self.x_max-1 and self.obj is not None:
+        #if x >= self.x_min-1 and x < self.x_max-1 and self.obj is not None:
+        if self.obj is not None:
             if isinstance(self.obj,list):
                 for obj in self.obj:
                     try:
@@ -2113,6 +2114,7 @@ class fill_between(plotObject):
         self.mpl_plot_type = plt.fill_between
         y1 = to_np_array(y1).reshape(-1)
         y2 = to_np_array(y2).reshape(-1)
+        x = to_np_array(x)
         if y1.size != x.size:
             y1 = np.ones_like(x)*y1[0]
         if y2.size != x.size:
@@ -2308,6 +2310,7 @@ class fill_betweenx(plotObject):
         self.mpl_plot_type = plt.fill_betweenx
         x1 = to_np_array(x1).reshape(-1)
         x2 = to_np_array(x2).reshape(-1)
+        y = to_np_array(y)
         if x1.size != y.size:
             x1 = np.ones_like(y)*x1[0]
         if x2.size != y.size:

@@ -45,7 +45,7 @@ Here's a quick example of the syntax of diplotocus:
    tl.animate(p)
 
    #We render our video
-   tl.save_video(path='../_static/demo.mp4')
+   tl.save_video(path='demo.mp4')
 
 .. raw:: html
 
