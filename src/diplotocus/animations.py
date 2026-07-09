@@ -1006,6 +1006,95 @@ class axis_limits(plotObject):
             ylim_top    = anim['start_ylim'][1] + (anim['ylim'][1] - anim['start_ylim'][1])*t
             self.axis.set_ylim(ylim_bottom,ylim_top)
 
+class axis_pos_and_size(plotObject):
+    """
+    Resize the axis to a given position and size.
+
+    Parameters
+    ----------
+    end_left : float
+        Target left position
+    end_bottom : float
+        Target bottom position
+    end_width : float
+        Target width
+    end_height : float
+        Target height
+    start_left = float
+        Initial left position
+    start_bottom : float
+        Initial bottom position
+    start_width : float
+        Initial width
+    start_height : float
+        Initial height
+    pos : array-like
+        Target left and bottom position
+    size : array-like
+        Target width and height
+    duration : float
+        Duration of the animation
+    delay : float, default=0
+        Delay before starting
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
+    """
+    def __init__(self,duration,
+                 end_left=None,end_bottom=None,end_width=None,end_height=None,
+                 start_left=None,start_bottom=None,start_width=None,start_height=None,
+                 delay=0,easing=None,axis=None,*args,**kwargs):
+        super().__init__(axis=axis,*args, **kwargs)
+        self.anims = [{
+            'name':'axis_move',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'persistent':True,
+            'start':[start_left,start_bottom,start_width,start_height],
+            'end':[end_left,end_bottom,end_width,end_height],
+            'played':False
+        }]
+        self.compute_timings()
+
+    def init(self):
+        left_i = self.axis.get_position().x0
+        bottom_i = self.axis.get_position().y0
+        width_i = self.axis.get_position().width
+        height_i = self.axis.get_position().height
+        if self.anims[0]['start'][0] is None:
+            self.anims[0]['start'][0] = left_i
+        if self.anims[0]['start'][1] is None:
+            self.anims[0]['start'][1] = bottom_i
+        if self.anims[0]['start'][2] is None:
+            self.anims[0]['start'][2] = width_i
+        if self.anims[0]['start'][3] is None:
+            self.anims[0]['start'][3] = height_i
+        if self.anims[0]['end'][0] is None:
+            self.anims[0]['end'][0] = left_i
+        if self.anims[0]['end'][1] is None:
+            self.anims[0]['end'][1] = bottom_i
+        if self.anims[0]['end'][2] is None:
+            self.anims[0]['end'][2] = width_i
+        if self.anims[0]['end'][3] is None:
+            self.anims[0]['end'][3] = height_i
+
+    def function(self,data_x,data_y,x,kwargs):
+        anim = self.anims[0]
+        if x < anim['delay']:
+            return
+        _x = min(x,anim['duration'] + anim['delay']-1)
+        t = self.get_t_from_x(anim,x)
+        width  = self.axis.get_xlim()[1]-self.axis.get_xlim()[0]
+        height = self.axis.get_ylim()[1]-self.axis.get_ylim()[0]
+        pos_x = anim['start'][0] + (anim['end'][0] - anim['start'][0])*t
+        pos_y = anim['start'][1] + (anim['end'][1] - anim['start'][1])*t
+        width = anim['start'][2] + (anim['end'][2] - anim['start'][2])*t
+        height = anim['start'][3] + (anim['end'][3] - anim['start'][3])*t
+        self.axis.set_position((pos_x,pos_y,width,height))
+
+
 class axis_move(plotObject):
     """
     Move the center of the axis to a given position.
