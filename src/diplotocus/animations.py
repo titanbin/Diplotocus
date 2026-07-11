@@ -155,56 +155,33 @@ class plotObject:
         data_x = to_np_array(self.x)
         data_y = to_np_array(self.y)
 
-        #First pass to get frame if sequencing
+        i_min,i_max = -1,-1
+
+        if len(data_x.shape) == 1:
+            data_x = data_x.reshape((-1,1))
+            data_y = data_y.reshape((-1,1))
+
+        if 'alpha' in kwargs:
+            alpha = to_np_array(kwargs['alpha'])
+            if np.sum(alpha) == 0:
+                kwargs['alpha'] = 1
+
         for anim in self.anims:
-            if anim['name'] != 'sequence':
+            if anim['name'] != 'sample':
                 continue
             if self.x is None:
                 continue
             if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                 continue
-            t = self.get_t_from_x(anim,x)
 
-            if len(data_x.shape) == 1:
-                data_x = data_x.reshape((-1,1))
-                data_y = data_y.reshape((-1,1))
-            
-            _i = max(min(round(t*len(data_x)),len(data_x)-1),0)
-            data_x = data_x[_i]
-            data_y = data_y[_i]
-            kwargs = self.resize_kwargs(kwargs,_i)
-
-        #Second pass to cut points if drawing or erasing
-        i_max = -1
-        for anim in self.anims:
-            if anim['name'] != 'draw':
-                continue
-            if self.x is None:
-                continue
-            if x < anim['delay'] or x > anim['delay'] + anim['duration']:
-                continue
-            t = self.get_t_from_x(anim,x)
-
-            if 'alpha' in kwargs:
-                alpha = to_np_array(kwargs['alpha'])
-                if np.sum(alpha) == 0:
-                    kwargs['alpha'] = 1
-
-            if anim['reverse']:
-                i_max = max(round((1-t)*len(data_x)),0)
-            else:
-                i_max = min(round(t*len(data_x)),len(data_x))
+            i_min,i_max = self.get_i_min_i_max_sample(anim,x,len(data_x))
             break
         
-        if i_max > 0:
-            data_x = data_x[:i_max]
+        if i_min >= 0 and i_max >= 0:
+            data_x = data_x[i_min:i_max]
             if data_y is not None:
-                data_y = data_y[:i_max]
-            kwargs = self.resize_kwargs(kwargs,list(range(i_max)))
-        elif i_max == 0:
-            data_x = []
-            data_y = []
-            kwargs = self.resize_kwargs(kwargs,None)
+                data_y = data_y[i_min:i_max]
+            kwargs = self.resize_kwargs(kwargs,list(range(i_min,i_max)))
 
         #Third pass to morph
         for anim in self.anims:
@@ -286,6 +263,26 @@ class plotObject:
         
         if self.function is not None:
             self.function(data_x,data_y,x,kwargs)
+
+    def get_i_min_i_max_sample(self,anim,x,len_data):
+        if anim['reverse']:
+            _x = anim['duration'] - (x - anim['delay'])
+        else:
+            _x = x - anim['delay']
+        if type(anim['min']) == str and anim['min'] == 'start':
+            i_min = 0
+        else:
+            i_min = int((_x + anim['min'])/anim['duration']*len_data)
+            i_min = max(i_min,0)
+        if type(anim['max']) == str and anim['max'] == 'end':
+            i_max = len_data - 1
+        else:
+            if anim['max'] == anim['min']:
+                i_max = i_min + 1
+            else:
+                i_max = int((_x + anim['max'])/anim['duration']*len_data)
+                i_max = min(i_max,len_data-1)
+        return i_min,i_max
 
     def get_sequential_t(self,i,x,size,anim):
         delay = anim['delay'] + i/size*anim['duration']*(1-anim['subduration'])
@@ -568,28 +565,7 @@ class plotObject:
         persistent : bool, default=True
             if True, the plot object will continue to be plotted after its last animation has played.
         """
-        if sort is not None:
-            if sort[-1] == 'x':
-                idx = np.argsort(self.x)
-            else:
-                idx = np.argsort(self.y)
-            if sort[0] == '-':
-                idx = idx[::-1]
-            self.x = self.x[idx]
-            self.y = self.y[idx]
-            self.kwargs = self.resize_kwargs(self.kwargs,idx)
-
-        self.anims.append({
-            'name':'draw',
-            'duration':duration,
-            'delay':delay,
-            'easing':easing,
-            'reverse':reverse,
-            'persistent':persistent,
-            'played':False
-        })
-        self.compute_timings()
-        return self
+        return self.subdraw('start',0,duration,reverse,sort,delay,easing,persistent)
     
     def scale(self,start_scale,end_scale,duration,center=None,delay=0,easing=None,persistent=True):
         """Scale a plot object from one size to another.
@@ -820,13 +796,17 @@ class plotObject:
         self.compute_timings()
         return self
     
-    def sequence(self,duration,delay=0,easing=None,persistent=True):
+    def sequence(self,duration,reverse=False,sort=None,delay=0,easing=None,persistent=True):
         """Plot one datapoint or row of the dataset per frame.
 
         Parameters
         ----------
         duration : float
             the number of frames the animation runs from.
+        reverse : bool, default=False
+            if True, removes points sequentially instead of adding points.
+        sort : str, default=None
+            sorts the data to draw it in order. Can be 'x','-x','y','-y' to sort in ascending or descending order.
         delay : float, default=0
             the number of frames after what the animation starts playing.
         easing : callable, optional
@@ -836,11 +816,44 @@ class plotObject:
 
         If the dataset is 1-dimensional, this plots a single datapoint per frame, if 2D, it will plot one row per frame. This animation can be used if you have a predefined list of datapoints you want to animate frame-by-frame.
         """
+        return self.subdraw(0,0,duration,reverse,sort,delay,easing,persistent)
+    
+    def subdraw(self,start_index,end_index,duration,reverse=False,sort=None,delay=0,easing=None,persistent=True):
+        """Plot multiple datapoints or rows of the dataset per frame, in the range 
+        [current_frame_index - start_index;current_frame_index + end_index]
+
+        Parameters
+        ----------
+        start_index : int or str
+            start index around the current frame index for the datapoints to plot. If str, can be 'start' to force
+            the range to start at 0 or 'end' to force it to end at the last datapoint.
+        end_index : int or str
+            end index around the current frame index for the datapoints to plot. If str, can be 'start' to force
+            the range to start at 0 or 'end' to force it to end at the last datapoint.
+        duration : float
+            the number of frames the animation runs from.
+        reverse : bool, default=False
+            if True, removes points sequentially instead of adding points.
+        sort : str, default=None
+            sorts the data to draw it in order. Can be 'x','-x','y','-y' to sort in ascending or descending order.
+        delay : float, default=0
+            the number of frames after what the animation starts playing.
+        easing : callable, optional
+            the easing used for this animation. If None, a linear easing is applied.
+        persistent : bool, default=True
+            if True, the plot object will continue to be plotted after its last animation has played.
+        """
+        if sort is not None:
+            self.sort_data(sort)
+        
         self.anims.append({
-            'name':'sequence',
+            'name':'sample',
+            'min':start_index,
+            'max':end_index,
             'duration':duration,
             'delay':delay,
             'easing':easing,
+            'reverse':reverse,
             'persistent':persistent,
             'played':False
         })
@@ -974,6 +987,17 @@ class plotObject:
         elif self.mpl_obj_type == mpl.patches.Circle:
             cx,cy = self.obj.get_center()
         return (cx,cy)
+
+    def sort_data(self,sort):
+        if sort[-1] == 'x':
+            idx = np.argsort(self.x)
+        else:
+            idx = np.argsort(self.y)
+        if sort[0] == '-':
+            idx = idx[::-1]
+        self.x = self.x[idx]
+        self.y = self.y[idx]
+        self.kwargs = self.resize_kwargs(self.kwargs,idx)
 
 class axis_zoom(plotObject):
     """
