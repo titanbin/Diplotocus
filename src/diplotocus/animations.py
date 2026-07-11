@@ -157,10 +157,6 @@ class plotObject:
 
         i_min,i_max = -1,-1
 
-        if len(data_x.shape) == 1:
-            data_x = data_x.reshape((-1,1))
-            data_y = data_y.reshape((-1,1))
-
         if 'alpha' in kwargs:
             alpha = to_np_array(kwargs['alpha'])
             if np.sum(alpha) == 0:
@@ -173,6 +169,10 @@ class plotObject:
                 continue
             if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                 continue
+
+            #if len(data_x.shape) == 1:
+                #data_x = data_x.reshape((-1,1))
+                #data_y = data_y.reshape((-1,1))
 
             i_min,i_max = self.get_i_min_i_max_sample(anim,x,len(data_x))
             break
@@ -864,6 +864,8 @@ class plotObject:
         if self.obj is not None and self.base_color is None:
             if isinstance(self.obj,(list,np.ndarray)):
                 self.base_color = self.obj[0].get_color()
+            elif isinstance(self.obj,mpl.patches.Polygon):
+                self.base_color = self.obj.get_fc()
             elif isinstance(self.obj,mpl.container.BarContainer):
                 self.base_color = self.obj[0].get_fc()
             elif hasattr(self.obj,'get_color'):
@@ -946,23 +948,8 @@ class plotObject:
             bbox = mpl.transforms.Bbox.union(bboxes)
             cx = (bbox.x0 + bbox.x1) / 2
             cy = (bbox.y0 + bbox.y1) / 2
-        elif self.mpl_obj_type == mpl.collections.Collection:
-            offsets = self.obj.get_offsets()
-            if len(offsets) == 0:
-                cx,cy = 0,0
-            else:
-                cx = np.mean(offsets[:, 0])
-                cy = np.mean(offsets[:, 1])
-        elif self.mpl_obj_type == mpl.collections.QuadMesh:
-            coords = self.obj.get_coordinates()
-            x0 = np.nanmin(coords[..., 0])
-            x1 = np.nanmax(coords[..., 0])
-            y0 = np.nanmin(coords[..., 1])
-            y1 = np.nanmax(coords[..., 1])
-
-            cx = 0.5 * (x0 + x1)
-            cy = 0.5 * (y0 + y1)
-        elif self.mpl_obj_type == mpl.patches.Rectangle:
+        elif self.mpl_obj_type == mpl.patches.Rectangle and \
+              (self.mpl_plot_type == plt.hist or self.mpl_plot_type == plt.bar):
             rects = self.obj.patches
             if isinstance(rects, list) and len(rects) > 0:
                 centers_x = []
@@ -979,12 +966,37 @@ class plotObject:
                 bbox = self.obj.get_bbox()
                 cx = (bbox.x0 + bbox.x1) / 2
                 cy = (bbox.y0 + bbox.y1) / 2
+        elif self.mpl_obj_type == mpl.patches.Polygon or \
+            self.mpl_obj_type == mpl.patches.Arrow or \
+            self.mpl_obj_type == mpl.patches.Rectangle or \
+            self.mpl_obj_type == mpl.patches.RegularPolygon or \
+            self.mpl_obj_type == mpl.patches.Wedge or \
+            self.mpl_obj_type == mpl.patches.FancyArrow:
+            bbox = self.obj.get_extents()
+            cx = (bbox.x0 + bbox.x1) / 2
+            cy = (bbox.y0 + bbox.y1) / 2
+        elif self.mpl_obj_type == mpl.collections.Collection:
+            offsets = self.obj.get_offsets()
+            if len(offsets) == 0:
+                cx,cy = 0,0
+            else:
+                cx = np.mean(offsets[:, 0])
+                cy = np.mean(offsets[:, 1])
+        elif self.mpl_obj_type == mpl.collections.QuadMesh:
+            coords = self.obj.get_coordinates()
+            x0 = np.nanmin(coords[..., 0])
+            x1 = np.nanmax(coords[..., 0])
+            y0 = np.nanmin(coords[..., 1])
+            y1 = np.nanmax(coords[..., 1])
+
+            cx = 0.5 * (x0 + x1)
+            cy = 0.5 * (y0 + y1)
         elif self.mpl_obj_type == mpl.collections.FillBetweenPolyCollection:
             bboxes = [p.get_extents() for p in self.obj.get_paths() if p.vertices.size]
             bbox = mpl.transforms.Bbox.union(bboxes)
             cx = 0.5 * (bbox.x0 + bbox.x1)
             cy = 0.5 * (bbox.y0 + bbox.y1)
-        elif self.mpl_obj_type == mpl.patches.Circle:
+        elif self.mpl_obj_type == mpl.patches.Circle or self.mpl_obj_type == mpl.patches.Ellipse:
             cx,cy = self.obj.get_center()
         return (cx,cy)
 
@@ -4322,7 +4334,7 @@ class Arrow(plotObject):
         properties.
     """
     def __init__(self,x,y,dx,dy,width=1.0,easing=None,axis=None, *args, **kwargs):
-        self.mpl_obj_type = mpl.patches.Circle
+        self.mpl_obj_type = mpl.patches.Arrow
         kwargs['x'] = x
         kwargs['y'] = y
         kwargs['dx'] = dx
@@ -4355,7 +4367,7 @@ class Ellipse(plotObject):
         Rotation in degrees anti-clockwise.
     """
     def __init__(self,xy,width,height,angle=0,easing=None,axis=None, *args, **kwargs):
-        self.mpl_obj_type = mpl.patches.Circle
+        self.mpl_obj_type = mpl.patches.Ellipse
         kwargs['xy'] = xy
         kwargs['width'] = width
         kwargs['height'] = height
@@ -4410,7 +4422,7 @@ class FancyArrow(plotObject):
                  length_includes_head=False,head_width=None,head_length=None,
                  shape='full',overhang=0,head_starts_at_zero=False,
                  easing=None,axis=None, *args, **kwargs):
-        self.mpl_obj_type = mpl.patches.Circle
+        self.mpl_obj_type = mpl.patches.FancyArrow
         kwargs['x'] = x
         kwargs['y'] = y
         kwargs['dx'] = dx
@@ -4453,7 +4465,7 @@ class Polygon(plotObject):
         points).
     """
     def __init__(self,xy,closed=True,easing=None,axis=None, *args, **kwargs):
-        self.mpl_obj_type = mpl.patches.Circle
+        self.mpl_obj_type = mpl.patches.Polygon
         kwargs['xy'] = xy
         kwargs['closed'] = closed
         super().__init__(easing=easing,axis=axis,*args, **kwargs)
@@ -4501,7 +4513,7 @@ class Rectangle(plotObject):
         coordinate.
     """
     def __init__(self,xy,width,height,angle=0.0,rotation_point='xy',easing=None,axis=None, *args, **kwargs):
-        self.mpl_obj_type = mpl.patches.Circle
+        self.mpl_obj_type = mpl.patches.Rectangle
         kwargs['xy'] = xy
         kwargs['width'] = width
         kwargs['height'] = height
@@ -4542,7 +4554,7 @@ class RegularPolygon(plotObject):
         The polygon rotation angle (in radians).
     """
     def __init__(self,xy,numVertices,radius=5,orientation=0,easing=None,axis=None, *args, **kwargs):
-        self.mpl_obj_type = mpl.patches.Circle
+        self.mpl_obj_type = mpl.patches.RegularPolygon
         kwargs['xy'] = xy
         kwargs['numVertices'] = numVertices
         kwargs['radius'] = radius
@@ -4572,7 +4584,7 @@ class Wedge(plotObject):
     to outer radius *r*.
     """
     def __init__(self,center,r,theta1,theta2,width=None,easing=None,axis=None, *args, **kwargs):
-        self.mpl_obj_type = mpl.patches.Circle
+        self.mpl_obj_type = mpl.patches.Wedge
         kwargs['center'] = center
         kwargs['r'] = r
         kwargs['theta1'] = theta1
@@ -4781,5 +4793,7 @@ class bar(plotObject):
         if len(data_x) == 0:
             data_x = [0]
             data_y = [0]
+            kwargs['width'] = [0]
+            kwargs['bottom'] = [0]
         obj = self.axis.bar(data_x,data_y,**kwargs)
         self.obj = obj
