@@ -83,8 +83,6 @@ class plotObject:
         if self.mpl_obj_type is None:
             return None
         alias_map = self.mpl_obj_type._alias_map
-        if self.mpl_plot_type == plt.plot and False:
-            alias_map['color'] = ['c']
         return alias_map
 
     def get_possible_kwargs(self):
@@ -224,9 +222,13 @@ class plotObject:
             new_data_x = []
             new_data_y = []
             for i in range(len(data_x)):
-                new_data_x.append(data_x[i] + (anim['new_x'][i] - data_x[i])*t)
+                if anim['sequential']:
+                    _t = self.get_sequential_t(i,x,len(data_x),anim)
+                else:
+                    _t = t
+                new_data_x.append(data_x[i] + (anim['new_x'][i] - data_x[i])*_t)
                 if len(data_y) == len(anim['new_y']):
-                    new_data_y.append(data_y[i] + (anim['new_y'][i] - data_y[i])*t)
+                    new_data_y.append(data_y[i] + (anim['new_y'][i] - data_y[i])*_t)
             data_x = new_data_x
             data_y = new_data_y
 
@@ -234,26 +236,50 @@ class plotObject:
                 new_data_x_err = []
                 new_data_y_err = []
                 for i in range(len(kwargs['xerr'])):
-                    new_data_x_err.append(kwargs['xerr'][i] + (anim['new_x_err'][i] - kwargs['xerr'][i])*t)
-                    new_data_y_err.append(kwargs['yerr'][i] + (anim['new_y_err'][i] - kwargs['yerr'][i])*t)
+                    if anim['sequential']:
+                        _t = self.get_sequential_t(i,x,len(data_x),anim)
+                    else:
+                        _t = t
+                    new_data_x_err.append(kwargs['xerr'][i] + (anim['new_x_err'][i] - kwargs['xerr'][i])*_t)
+                    new_data_y_err.append(kwargs['yerr'][i] + (anim['new_y_err'][i] - kwargs['yerr'][i])*_t)
                 kwargs['xerr'] = new_data_x_err
                 kwargs['xerr'] = new_data_y_err
             elif self.__class__.__name__ == 'fill_between':
                 new_y1 = []
                 new_y2 = []
                 for i in range(len(kwargs['y1'])):
-                    new_y1.append(kwargs['y1'][i] + (anim['new_y1'][i] - kwargs['y1'][i])*t)
-                    new_y2.append(kwargs['y2'][i] + (anim['new_y2'][i] - kwargs['y2'][i])*t)
+                    if anim['sequential']:
+                        _t = self.get_sequential_t(i,x,len(data_x),anim)
+                    else:
+                        _t = t
+                    new_y1.append(kwargs['y1'][i] + (anim['new_y1'][i] - kwargs['y1'][i])*_t)
+                    new_y2.append(kwargs['y2'][i] + (anim['new_y2'][i] - kwargs['y2'][i])*_t)
                 kwargs['y1'] = new_y1
                 kwargs['y2'] = new_y2
             elif self.__class__.__name__ == 'fill_betweenx':
                 new_x1 = []
                 new_x2 = []
                 for i in range(len(kwargs['x1'])):
-                    new_x1.append(kwargs['x1'][i] + (anim['new_x1'][i] - kwargs['x1'][i])*t)
-                    new_x2.append(kwargs['x2'][i] + (anim['new_x2'][i] - kwargs['x2'][i])*t)
+                    if anim['sequential']:
+                        _t = self.get_sequential_t(i,x,len(data_x),anim)
+                    else:
+                        _t = t
+                    new_x1.append(kwargs['x1'][i] + (anim['new_x1'][i] - kwargs['x1'][i])*_t)
+                    new_x2.append(kwargs['x2'][i] + (anim['new_x2'][i] - kwargs['x2'][i])*_t)
                 kwargs['x1'] = new_x1
                 kwargs['x2'] = new_x2
+            elif self.__class__.__name__ == 'bar':
+                new_width = []
+                new_bottom = []
+                for i in range(len(data_x)):
+                    if anim['sequential']:
+                        _t = self.get_sequential_t(i,x,len(data_x),anim)
+                    else:
+                        _t = t
+                    new_width.append(kwargs['width'][i] + (anim['new_width'][i] - kwargs['width'][i])*_t)
+                    new_bottom.append(kwargs['bottom'][i] + (anim['new_bottom'][i] - kwargs['bottom'][i])*_t)
+                kwargs['width'] = new_width
+                kwargs['bottom'] = new_bottom
 
         data_x = to_np_array(data_x)
         data_y = to_np_array(data_y)
@@ -261,6 +287,19 @@ class plotObject:
         if self.function is not None:
             self.function(data_x,data_y,x,kwargs)
 
+    def get_sequential_t(self,i,x,size,anim):
+        delay = anim['delay'] + i/size*anim['duration']*(1-anim['subduration'])
+        duration = anim['duration']*anim['subduration']
+        if x < delay:
+            return 0
+        if x > delay + duration:
+            return 1
+        return self.get_t_from_x({
+            'delay':delay,
+            'duration':duration,
+            'easing':anim['easing'],
+        },x)
+    
     def initialize(self,timeline):
         self.tl = timeline
         if self.axis is None:
@@ -327,7 +366,7 @@ class plotObject:
         self.compute_timings()
         return self
 
-    def tween(self,property,start,end,duration,delay=0,easing=None,persistent=True):
+    def tween(self,property,start,end,duration,delay=0,easing=None,persistent=True,sequential=False,subduration=0.1):
         """Animate a change in a property of the plot object.
 
         Parameters
@@ -344,10 +383,16 @@ class plotObject:
             the number of frames after what the animation starts playing.
         easing : callable, optional
             the easing used for this animation. If None, a linear easing is applied.
+        persistent : bool, default=True
+            if True, the plot object will continue to be plotted after its last animation has played.
+        sequential : bool, default=False
+            if True, the morphing will happen gradually over the data length
+        subduration : float, default=0.1
+            if sequential=True, the fractional duration of animation of each data point, in units of total duration
         """
-        return self.tweens([property],[start],[end],duration,delay,easing,persistent=persistent)
+        return self.tweens([property],[start],[end],duration,delay,easing,persistent=persistent,sequential=sequential,subduration=subduration)
     
-    def tweens(self,properties,starts,ends,duration,delay=0,easing=None,persistent=True):
+    def tweens(self,properties,starts,ends,duration,delay=0,easing=None,persistent=True,sequential=False,subduration=0.1):
         """Animate multiple properties at once.
 
         Parameters
@@ -364,6 +409,12 @@ class plotObject:
             the number of frames after what the animation starts playing.
         easing : callable, optional
             the easing used for this animation. If None, a linear easing is applied.
+        persistent : bool, default=True
+            if True, the plot object will continue to be plotted after its last animation has played.
+        sequential : bool, default=False
+            if True, the morphing will happen gradually over the data length
+        subduration : float, default=0.1
+            if sequential=True, the fractional duration of animation of each data point, in units of total duration
         """
         starts = [to_np_array(start) for start in starts]
         ends = [to_np_array(end) for end in ends]
@@ -380,6 +431,8 @@ class plotObject:
                 'start':start,
                 'end':end,
                 'persistent':persistent,
+                'sequential':sequential,
+                'subduration':subduration,
                 'played':False
             }
             self.anims.append(new_anim)
@@ -436,16 +489,24 @@ class plotObject:
                 continue
             if anim['name'] != 'tween':
                 continue
-            _x = min(x,anim['duration'] + anim['delay'])
-            t = self.get_t_from_x(anim,_x)
-            t = np.clip(t,0,1)
             start = to_np_array(anim['start'])
             end = to_np_array(anim['end'])
-            current = start + (end - start)*t
+
+            _x = min(x,anim['duration'] + anim['delay'])
+
+            if anim['sequential'] == False:
+                t = self.get_t_from_x(anim,_x)
+                t = np.clip(t,0,1)
+                current = start + (end - start)*t
+            else:
+                current = []
+                for i in range(len(self.x)):
+                    _t = self.get_sequential_t(i,_x,len(self.x),anim)
+                    current.append(start + (end - start)*_t)
             kwargs[anim['property']] = current
         return kwargs
 
-    def show(self,duration,delay=0,easing=None,persistent=True):
+    def show(self,duration,delay=0,easing=None,persistent=True,sequential=False,subduration=0.1):
         """Fade in plot objects.
 
         This is a shorthand animation that fades in plot objects. It is equivalent to `tween('alpha',0,1)`.
@@ -460,10 +521,14 @@ class plotObject:
             the easing used for this animation. If None, a linear easing is applied.
         persistent : bool, default=True
             if True, the plot object will continue to be plotted after its last animation has played.
+        sequential : bool, default=False
+            if True, the morphing will happen gradually over the data length
+        subduration : float, default=0.1
+            if sequential=True, the fractional duration of animation of each data point, in units of total duration
         """
-        return self.tween('alpha',start=0,end=1,duration=duration,delay=delay,easing=easing,persistent=persistent)
+        return self.tween('alpha',start=0,end=1,duration=duration,delay=delay,easing=easing,persistent=persistent,sequential=sequential,subduration=subduration)
 
-    def hide(self,duration,delay=0,easing=None,persistent=True):
+    def hide(self,duration,delay=0,easing=None,persistent=True,sequential=False,subduration=0.1):
         """Fade out plot objects.
 
         This is a shorthand animation that fades out plot objects. It is equivalent to `tween('alpha',1,0)`.
@@ -478,8 +543,12 @@ class plotObject:
             the easing used for this animation. If None, a linear easing is applied.
         persistent : bool, default=True
             if True, the plot object will continue to be plotted after its last animation has played.
+        sequential : bool, default=False
+            if True, the morphing will happen gradually over the data length
+        subduration : float, default=0.1
+            if sequential=True, the fractional duration of animation of each data point, in units of total duration
         """
-        return self.tween('alpha',start=1,end=0,duration=duration,delay=delay,easing=easing,persistent=persistent)
+        return self.tween('alpha',start=1,end=0,duration=duration,delay=delay,easing=easing,persistent=persistent,sequential=sequential,subduration=subduration)
     
     def draw(self,duration,reverse=False,sort=None,delay=0,easing=None,persistent=True):
         """Animate the plot object by sequentially adding more points of the dataset.
@@ -705,7 +774,7 @@ class plotObject:
             else:
                 o.set_transform(self.T + self.axis.transData)
     
-    def morph(self,new_x,new_y,duration,delay=0,easing=None,persistent=True):
+    def morph(self,new_x,new_y,duration,delay=0,easing=None,persistent=True,sequential=False,subduration=0.1):
         """Morph between the base dataset and a new dataset.
 
         Parameters
@@ -722,6 +791,10 @@ class plotObject:
             the easing used for this animation. If None, a linear easing is applied.
         persistent : bool, default=True
             if True, the plot object will continue to be plotted after its last animation has played.
+        sequential : bool, default=False
+            if True, the morphing will happen gradually over the data length
+        subduration : float, default=0.1
+            if sequential=True, the fractional duration of animation of each data point, in units of total duration
 
         For plot objects that take 1D datasets (e.g. hist()), `morph()` only accepts `new_x`.
         """
@@ -740,6 +813,8 @@ class plotObject:
             'new_x':new_x,
             'new_y':new_y,
             'persistent':persistent,
+            'sequential':sequential,
+            'subduration':subduration,
             'played':False
         })
         self.compute_timings()
@@ -775,7 +850,9 @@ class plotObject:
     def clean(self,x,clear_anims=True):
         if self.obj is not None and self.base_color is None:
             if isinstance(self.obj,(list,np.ndarray)):
-                self.base_color = self.obj[0].get_color()    
+                self.base_color = self.obj[0].get_color()
+            elif isinstance(self.obj,mpl.container.BarContainer):
+                self.base_color = self.obj[0].get_fc()
             elif hasattr(self.obj,'get_color'):
                 self.base_color = self.obj.get_color()
             if 'color' not in self.kwargs and 'c' not in self.kwargs and self.base_color is not None:
@@ -1093,7 +1170,6 @@ class axis_pos_and_size(plotObject):
         width = anim['start'][2] + (anim['end'][2] - anim['start'][2])*t
         height = anim['start'][3] + (anim['end'][3] - anim['start'][3])*t
         self.axis.set_position((pos_x,pos_y,width,height))
-
 
 class axis_move(plotObject):
     """
@@ -2221,7 +2297,7 @@ class fill_between(plotObject):
                 self.kwargs['facecolor'] = self.base_color
         super().clean(x,clear_anims)
 
-    def morph(self,new_x,duration,new_y1=None,new_y2=None,delay=0,easing=None,persistent=True):
+    def morph(self,new_x,duration,new_y1=None,new_y2=None,delay=0,easing=None,persistent=True,sequential=False,subduration=0.1):
         if new_y1 is None:
             new_y1 = self.y1
         if new_y2 is None:
@@ -2241,6 +2317,8 @@ class fill_between(plotObject):
             'new_y1':new_y1,
             'new_y2':new_y2,
             'persistent':persistent,
+            'sequential':sequential,
+            'subduration':subduration,
             'played':False
         })
         self.compute_timings()
@@ -2417,7 +2495,7 @@ class fill_betweenx(plotObject):
                 self.kwargs['facecolor'] = self.base_color
         super().clean(x,clear_anims)
     
-    def morph(self,new_y,duration,new_x1=None,new_x2=None,delay=0,easing=None,persistent=True):
+    def morph(self,new_y,duration,new_x1=None,new_x2=None,delay=0,easing=None,persistent=True,sequential=False,subduration=0.1):
         if new_x1 is None:
             new_x1 = self.x1
         if new_x2 is None:
@@ -2437,6 +2515,8 @@ class fill_betweenx(plotObject):
             'new_x1':new_x1,
             'new_x2':new_x2,
             'persistent':persistent,
+            'sequential':sequential,
+            'subduration':subduration,
             'played':False
         })
         self.compute_timings()
@@ -2870,7 +2950,7 @@ class errorbar(plotObject):
         self.xerr = xerr
         self.yerr = yerr
 
-    def morph(self,new_x,new_y,duration,new_xerr=None,new_yerr=None,delay=0,easing=None,persistent=True):
+    def morph(self,new_x,new_y,duration,new_xerr=None,new_yerr=None,delay=0,easing=None,persistent=True,sequential=False,subduration=0.1):
         if new_xerr is None:
             new_xerr = self.xerr
         if new_yerr is None:
@@ -2891,6 +2971,8 @@ class errorbar(plotObject):
             'new_x_err':new_xerr,
             'new_y_err':new_yerr,
             'persistent':persistent,
+            'sequential':sequential,
+            'subduration':subduration,
             'played':False
         })
         self.compute_timings()
@@ -3127,7 +3209,7 @@ class hist(plotObject):
                 self.kwargs['color'] = self.base_color
         super().clean(x,clear_anims)
     
-    def morph(self,new_x,duration,delay=0,easing=None,persistent=True,**kwargs):
+    def morph(self,new_x,duration,delay=0,easing=None,persistent=True,sequential=False,subduration=0.1,**kwargs):
         if isinstance(new_x,numbers.Number):
             new_x = [new_x]
         
@@ -3139,6 +3221,8 @@ class hist(plotObject):
             'new_x':new_x,
             'new_y':np.zeros_like(self.y),
             'persistent':persistent,
+            'sequential':sequential,
+            'subduration':subduration,
             'played':False
         })
         self.compute_timings()
@@ -3622,7 +3706,7 @@ class contourf(plotObject):
         self._y = np.array(self._y)
         self.init_shape = z.shape
 
-    def morph(self,new_z,duration,delay=0,easing=None,persistent=True,**kwargs):
+    def morph(self,new_z,duration,delay=0,easing=None,persistent=True,sequential=False,subduration=0.1,**kwargs):
         self.anims.append({
             'name':'morph',
             'duration':duration,
@@ -3631,6 +3715,8 @@ class contourf(plotObject):
             'new_x':np.ravel(new_z),
             'new_y':np.ravel(new_z),
             'persistent':persistent,
+            'sequential':sequential,
+            'subduration':subduration,
             'played':False
         })
         self.compute_timings()
@@ -4483,3 +4569,193 @@ class Wedge(plotObject):
 
         self.obj = mpl.patches.Wedge(**kwargs)
         self.axis.add_patch(self.obj)
+
+class bar(plotObject):
+    """
+    Make a bar plot.
+
+    The bars are positioned at *x* with the given *align*ment. Their
+    dimensions are given by *height* and *width*. The vertical baseline
+    is *bottom* (default 0).
+
+    Many parameters can take either a single value applying to all bars
+    or a sequence of values, one for each bar.
+
+    Parameters
+    ----------
+    x : float or array-like
+        The x coordinates of the bars. See also *align* for the
+        alignment of the bars to the coordinates.
+
+        Bars are often used for categorical data, i.e. string labels below
+        the bars. You can provide a list of strings directly to *x*.
+        ``bar(['A', 'B', 'C'], [1, 2, 3])`` is often a shorter and more
+        convenient notation compared to
+        ``bar(range(3), [1, 2, 3], tick_label=['A', 'B', 'C'])``. They are
+        equivalent as long as the names are unique. The explicit *tick_label*
+        notation draws the names in the sequence given. However, when having
+        duplicate values in categorical *x* data, these values map to the same
+        numerical x coordinate, and hence the corresponding bars are drawn on
+        top of each other.
+
+    height : float or array-like
+        The height(s) of the bars.
+
+        Note that if *bottom* has units (e.g. datetime), *height* should be in
+        units that are a difference from the value of *bottom* (e.g. timedelta).
+
+    width : float or array-like, default: 0.8
+        The width(s) of the bars.
+
+        Note that if *x* has units (e.g. datetime), then *width* should be in
+        units that are a difference (e.g. timedelta) around the *x* values.
+
+    bottom : float or array-like, default: 0
+        The y coordinate(s) of the bottom side(s) of the bars.
+
+        Note that if *bottom* has units, then the y-axis will get a Locator and
+        Formatter appropriate for the units (e.g. dates, or categorical).
+
+    align : {'center', 'edge'}, default: 'center'
+        Alignment of the bars to the *x* coordinates:
+
+        - 'center': Center the base on the *x* positions.
+        - 'edge': Align the left edges of the bars with the *x* positions.
+
+        To align the bars on the right edge pass a negative *width* and
+        ``align='edge'``.
+
+    Returns
+    -------
+    `.BarContainer`
+        Container with all the bars and optionally errorbars.
+
+    Other Parameters
+    ----------------
+    color : :mpltype:`color` or list of :mpltype:`color`, optional
+        The colors of the bar faces. This is an alias for *facecolor*.
+        If both are given, *facecolor* takes precedence.
+
+    facecolor : :mpltype:`color` or list of :mpltype:`color`, optional
+        The colors of the bar faces.
+        If both *color* and *facecolor are given, *facecolor* takes precedence.
+
+    edgecolor : :mpltype:`color` or list of :mpltype:`color`, optional
+        The colors of the bar edges.
+
+    linewidth : float or array-like, optional
+        Width of the bar edge(s). If 0, don't draw edges.
+
+    tick_label : str or list of str, optional
+        The tick labels of the bars.
+        Default: None (Use default numeric labels.)
+
+    label : str or list of str, optional
+        A single label is attached to the resulting `.BarContainer` as a
+        label for the whole dataset.
+        If a list is provided, it must be the same length as *x* and
+        labels the individual bars. Repeated labels are not de-duplicated
+        and will cause repeated label entries, so this is best used when
+        bars also differ in style (e.g., by passing a list to *color*.)
+
+    xerr, yerr : float or array-like of shape(N,) or shape(2, N), optional
+        If not *None*, add horizontal / vertical errorbars to the bar tips.
+        The values are +/- sizes relative to the data:
+
+        - scalar: symmetric +/- values for all bars
+        - shape(N,): symmetric +/- values for each bar
+        - shape(2, N): Separate - and + values for each bar. First row
+            contains the lower errors, the second row contains the upper
+            errors.
+        - *None*: No errorbar. (Default)
+
+        See :doc:`/gallery/statistics/errorbar_features` for an example on
+        the usage of *xerr* and *yerr*.
+
+    ecolor : :mpltype:`color` or list of :mpltype:`color`, default: 'black'
+        The line color of the errorbars.
+
+    capsize : float, default: :rc:`errorbar.capsize`
+        The length of the error bar caps in points.
+
+    error_kw : dict, optional
+        Dictionary of keyword arguments to be passed to the
+        `~.Axes.errorbar` method. Values of *ecolor* or *capsize* defined
+        here take precedence over the independent keyword arguments.
+
+    log : bool, default: False
+        If *True*, set the y-axis to be log scale.
+
+    data : indexable object, optional
+        DATA_PARAMETER_PLACEHOLDER
+
+    **kwargs : `.Rectangle` properties
+
+    %(Rectangle:kwdoc)s
+
+    See Also
+    --------
+    barh : Plot a horizontal bar plot.
+
+    Notes
+    -----
+    Stacked bars can be achieved by passing individual *bottom* values per
+    bar. See :doc:`/gallery/lines_bars_and_markers/bar_stacked`.
+    """
+    def __init__(self,x,height,width=0.8,bottom=0,easing=None,axis=None, *args, **kwargs):
+        #self.mpl_obj_type = mpl.container.BarContainer
+        self.mpl_obj_type = mpl.patches.Rectangle
+        self.mpl_plot_type = plt.bar
+        if np.ravel(width).size == 1:
+            width = np.ones_like(x)*width
+        if np.ravel(height).size == 1:
+            height = np.ones_like(x)*height
+        if np.ravel(bottom).size == 1:
+            bottom = np.ones_like(x)*bottom
+        kwargs['width'] = width
+        kwargs['bottom'] = bottom
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = x
+        self.y = height
+
+    def morph(self,new_x,new_height,duration,new_width=None,new_bottom=None,delay=0,easing=None,persistent=True,sequential=False,subduration=0.1):
+        if new_width is None:
+            new_width = self.kwargs['width']
+        elif np.ravel(new_width).size == 1:
+            new_width = np.ones_like(new_x)*new_width
+        if new_bottom is None:
+            new_bottom = self.kwargs['bottom']
+        elif np.ravel(new_bottom).size == 1:
+            new_bottom = np.ones_like(new_x)*new_bottom
+        if isinstance(new_x,numbers.Number):
+            new_x = [new_x]
+            new_height = [new_height]
+            new_width = [new_width]
+            new_bottom = [new_bottom]
+        
+        self.anims.append({
+            'name':'morph',
+            'duration':duration,
+            'delay':delay,
+            'easing':easing,
+            'new_x':new_x,
+            'new_y':new_height,
+            'new_width':new_width,
+            'new_bottom':new_bottom,
+            'persistent':persistent,
+            'sequential':sequential,
+            'subduration':subduration,
+            'played':False
+        })
+        self.compute_timings()
+        return self
+    
+    def function(self,data_x,data_y,x,kwargs):
+        #This is a hack because when plotting a bar with empty data, no children are stored
+        #but the color cycler still triggers, so a color is assigned by we can't know what
+        #it is. So instead we plot a single bar with height 0 and get its color.
+        if len(data_x) == 0:
+            data_x = [0]
+            data_y = [0]
+        obj = self.axis.bar(data_x,data_y,**kwargs)
+        self.obj = obj

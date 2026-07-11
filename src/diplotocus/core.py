@@ -385,15 +385,17 @@ class Timeline:
                 f.write(self.timeline_str)
         sequence_fn = self.name + '/' + self.name  + '.txt'
 
+        ffmpeg_flags = '-hide_banner -loglevel error -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2"'
+
         if '.mov' in video_fn:
             if multialpha:
-                command = ffmpeg_path + ' -f concat -safe 0 -i {} -y -vf premultiply=inplace=1 -c:v prores_ks -profile:v 4 -pix_fmt yuva444p10le -hide_banner -loglevel error {}'.format(sequence_fn,video_fn)
+                command = ffmpeg_path + ' -f concat -safe 0 -i {} -y -vf premultiply=inplace=1 -c:v prores_ks -profile:v 4 -pix_fmt yuva444p10le {} {}'.format(sequence_fn,ffmpeg_flags,video_fn)
             else:
-                command = ffmpeg_path + ' -f concat -safe 0 -i {} -y -c:v prores -pix_fmt yuva444p10le -hide_banner -loglevel error {}'.format(sequence_fn,video_fn)
+                command = ffmpeg_path + ' -f concat -safe 0 -i {} -y -c:v prores -pix_fmt yuva444p10le {} {}'.format(sequence_fn,ffmpeg_flags,video_fn)
         elif is_gif:
-            command = ffmpeg_path + ' -f concat -safe 0 -i {} -y -lavfi "split[s0][s1];[s0]palettegen=reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=sierra2_4a:alpha_threshold=128" -gifflags -offsetting -loop 0 -hide_banner -loglevel error {}'.format(sequence_fn,video_fn)
+            command = ffmpeg_path + ' -f concat -safe 0 -i {} -y -lavfi "split[s0][s1];[s0]palettegen=reserve_transparent=1:stats_mode=diff[p];[s1][p]paletteuse=dither=sierra2_4a:alpha_threshold=128" -gifflags -offsetting -loop 0 {}'.format(sequence_fn,ffmpeg_flags,video_fn)
         else:
-            command = ffmpeg_path + ' -f concat -safe 0 -i {} -c:v libx264 -pix_fmt yuv420p -c:a aac -movflags +faststart -hide_banner -loglevel error -y {}'.format(sequence_fn,video_fn)
+            command = ffmpeg_path + ' -f concat -safe 0 -i {} -y -c:v libx264 -pix_fmt yuv420p -c:a aac -movflags +faststart {} {}'.format(sequence_fn,ffmpeg_flags,video_fn)
         subprocess.run(shlex.split(command))
         if clean:
             shutil.rmtree(self.name)
