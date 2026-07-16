@@ -27,6 +27,8 @@ def dealias(mpl_obj,kwargs):
     return kwargs
 
 def to_np_array(obj):
+    if type(obj) == np.ndarray:
+        return obj
     obj = np.array(obj)
     if obj.ndim == 0:
         obj = np.ravel(obj)
@@ -170,10 +172,6 @@ class plotObject:
             if x < anim['delay'] or x > anim['delay'] + anim['duration']:
                 continue
 
-            #if len(data_x.shape) == 1:
-                #data_x = data_x.reshape((-1,1))
-                #data_y = data_y.reshape((-1,1))
-
             i_min,i_max = self.get_i_min_i_max_sample(anim,x,len(data_x))
             break
         
@@ -181,6 +179,10 @@ class plotObject:
             data_x = data_x[i_min:i_max]
             if data_y is not None:
                 data_y = data_y[i_min:i_max]
+            if data_x.shape[0] == 1:
+                data_x = data_x.reshape(-1)
+            if data_y.shape[0] == 1:
+                data_y = data_y.reshape(-1)
             kwargs = self.resize_kwargs(kwargs,list(range(i_min,i_max)))
 
         #Third pass to morph
@@ -2074,7 +2076,6 @@ class plot(plotObject):
         self.mpl_obj_type = mpl.lines.Line2D
         self.mpl_plot_type = plt.plot
         super().__init__(easing=easing,axis=axis,*args, **kwargs)
-
         self.x = to_np_array(x)
         self.y = to_np_array(y)
         if self.x.size != self.y.size:
