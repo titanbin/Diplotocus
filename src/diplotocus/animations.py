@@ -159,10 +159,10 @@ class plotObject:
 
         i_min,i_max = -1,-1
 
-        if 'alpha' in kwargs:
-            alpha = to_np_array(kwargs['alpha'])
-            if np.sum(alpha) == 0:
-                kwargs['alpha'] = 1
+        #if 'alpha' in kwargs:
+            #alpha = to_np_array(kwargs['alpha'])
+            #if np.sum(alpha) == 0:
+                #kwargs['alpha'] = 1
 
         for anim in self.anims:
             if anim['name'] != 'sample':
@@ -2084,6 +2084,7 @@ class plot(plotObject):
     def function(self,data_x,data_y,x,kwargs):
         if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
             kwargs['alpha'] = kwargs['alpha'][0]
+        
         self.obj = self.axis.plot(data_x,data_y,**kwargs)
 
 class step(plotObject):

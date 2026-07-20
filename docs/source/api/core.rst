@@ -31,7 +31,15 @@ Axis and figure animations
    :members:
    :undoc-members:
 
+.. autoclass:: diplotocus.animations.axis_pos_and_size
+   :members:
+   :undoc-members:
+
 .. autoclass:: diplotocus.animations.axis_move
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.axis_track
    :members:
    :undoc-members:
 
@@ -99,6 +107,54 @@ Plot object animations
    :undoc-members:
 
 .. autoclass:: diplotocus.animations.svg
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.Circle
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.fill
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.Annulus
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.Arc
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.Arrow
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.Ellipse
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.FancyArrow
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.Polygon
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.Rectangle
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.RegularPolygon
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.Wedge
+   :members:
+   :undoc-members:
+
+.. autoclass:: diplotocus.animations.bar
    :members:
    :undoc-members:
 
