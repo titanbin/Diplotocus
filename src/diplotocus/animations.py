@@ -29,7 +29,10 @@ def dealias(mpl_obj,kwargs):
 def to_np_array(obj):
     if type(obj) == np.ndarray:
         return obj
-    obj = np.array(obj)
+    try:
+        obj = np.array(obj)
+    except:
+        obj = np.array(obj,dtype=object)
     if obj.ndim == 0:
         obj = np.ravel(obj)
     return obj
@@ -150,6 +153,8 @@ class plotObject:
                 if idx is None:
                     kwargs[key] = to_np_array([])
                 else:
+                    if isinstance(idx,(list,np.ndarray)):
+                        idx = [i for i in idx if i < len(kwarg)]
                     kwargs[key] = to_np_array(kwarg)[idx]
         return kwargs
 
@@ -185,7 +190,7 @@ class plotObject:
                 data_y = data_y.reshape(-1)
             kwargs = self.resize_kwargs(kwargs,list(range(i_min,i_max)))
 
-        #Third pass to morph
+        #Second pass to morph
         for anim in self.anims:
             if anim['name'] != 'morph':
                 continue
@@ -206,7 +211,7 @@ class plotObject:
                 else:
                     _t = t
                 new_data_x.append(data_x[i] + (anim['new_x'][i] - data_x[i])*_t)
-                if len(data_y) == len(anim['new_y']):
+                if len(data_y) == len(data_x):
                     new_data_y.append(data_y[i] + (anim['new_y'][i] - data_y[i])*_t)
             data_x = new_data_x
             data_y = new_data_y
@@ -277,13 +282,13 @@ class plotObject:
             i_min = int((_x + anim['min'])/anim['duration']*len_data)
             i_min = max(i_min,0)
         if type(anim['max']) == str and anim['max'] == 'end':
-            i_max = len_data - 1
+            i_max = len_data+1
         else:
             if anim['max'] == anim['min']:
                 i_max = i_min + 1
             else:
-                i_max = int((_x + anim['max'])/anim['duration']*len_data)
-                i_max = min(i_max,len_data-1)
+                i_max = int((_x + anim['max'])/(anim['duration']-1)*(len_data+1))
+                i_max = min(i_max,len_data+1)
         return i_min,i_max
 
     def get_sequential_t(self,i,x,size,anim):
@@ -1135,7 +1140,7 @@ class axis_pos_and_size(plotObject):
         Target width
     end_height : float
         Target height
-    start_left = float
+    start_left : float
         Initial left position
     start_bottom : float
         Initial bottom position
@@ -1143,10 +1148,6 @@ class axis_pos_and_size(plotObject):
         Initial width
     start_height : float
         Initial height
-    pos : array-like
-        Target left and bottom position
-    size : array-like
-        Target width and height
     duration : float
         Duration of the animation
     delay : float, default=0
@@ -1197,9 +1198,8 @@ class axis_pos_and_size(plotObject):
 
     def function(self,data_x,data_y,x,kwargs):
         anim = self.anims[0]
-        if x < anim['delay']:
+        if x < anim['delay'] or x >= anim['delay'] + anim['duration']:
             return
-        _x = min(x,anim['duration'] + anim['delay']-1)
         t = self.get_t_from_x(anim,x)
         width  = self.axis.get_xlim()[1]-self.axis.get_xlim()[0]
         height = self.axis.get_ylim()[1]-self.axis.get_ylim()[0]
@@ -1414,11 +1414,9 @@ class fig_width_ratio(plotObject):
         Delay before starting
     easing : callable, optional
         Easing function
-    axis : matplotlib.axes.Axes, optional
-        Axis to plot on
     """
-    def __init__(self,start_widths,end_widths,duration,delay=0,easing=None,axis=None,*args,**kwargs):
-        super().__init__(axis=axis,*args, **kwargs)
+    def __init__(self,start_widths,end_widths,duration,delay=0,easing=None,*args,**kwargs):
+        super().__init__(*args, **kwargs)
         self.grid = None
         start_widths = to_np_array(start_widths).astype(float)
         end_widths = to_np_array(end_widths).astype(float)
@@ -1485,11 +1483,9 @@ class fig_height_ratio(plotObject):
         Delay before starting
     easing : callable, optional
         Easing function
-    axis : matplotlib.axes.Axes, optional
-        Axis to plot on
     """
-    def __init__(self,start_heights,end_heights,duration,delay=0,easing=None,axis=None,*args,**kwargs):
-        super().__init__(axis=axis,*args, **kwargs)
+    def __init__(self,start_heights,end_heights,duration,delay=0,easing=None,*args,**kwargs):
+        super().__init__(*args, **kwargs)
         self.grid = None
         start_heights = to_np_array(start_heights)
         end_heights = to_np_array(end_heights)
@@ -1549,10 +1545,6 @@ class scatter(plotObject):
     x, y : float or array-like, shape (n, )
         The data positions.
 
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
     easing : callable, optional
         Easing function
     axis : matplotlib.axes.Axes, optional
@@ -1863,10 +1855,6 @@ class plot(plotObject):
         The horizontal / vertical coordinates of the data points.
         *x* values are optional and default to ``range(len(y))``.
 
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
     easing : callable, optional
         Easing function
     axis : matplotlib.axes.Axes, optional
@@ -2118,6 +2106,11 @@ class step(plotObject):
     y : array-like
         1D sequence of y levels.
 
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
+
     fmt : str, optional
         A format string, e.g. 'g' for a green line. See `.plot` for a more
         detailed description.
@@ -2186,10 +2179,6 @@ class fill_between(plotObject):
     x : array-like
         The x coordinates of the nodes defining the curves.
 
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
     easing : callable, optional
         Easing function
     axis : matplotlib.axes.Axes, optional
@@ -2384,10 +2373,6 @@ class fill_betweenx(plotObject):
     y : array-like
         The y coordinates of the nodes defining the curves.
 
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
     easing : callable, optional
         Easing function
     axis : matplotlib.axes.Axes, optional
@@ -2575,10 +2560,6 @@ class axvline(plotObject):
     x : float, default: 0
         x position in :ref:`data coordinates <coordinate-systems>`.
 
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
     easing : callable, optional
         Easing function
     axis : matplotlib.axes.Axes, optional
@@ -2714,6 +2695,11 @@ class axhline(plotObject):
     y : float, default: 0
         y position in :ref:`data coordinates <coordinate-systems>`.
 
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
+
     xmin : float, default: 0
         The start x-position in :ref:`axes coordinates <coordinate-systems>`.
         Should be between 0 and 1, 0 being the far left of the plot,
@@ -2797,10 +2783,6 @@ class errorbar(plotObject):
     x, y : float or array-like
         The data positions.
 
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
     easing : callable, optional
         Easing function
     axis : matplotlib.axes.Axes, optional
@@ -3057,10 +3039,6 @@ class hist(plotObject):
         Input values, this takes either a single array or a sequence of
         arrays which are not required to be of the same length.
 
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
     easing : callable, optional
         Easing function
     axis : matplotlib.axes.Axes, optional
@@ -3287,10 +3265,6 @@ class hist2d(plotObject):
     x, y : array-like, shape (n, )
         Input values
 
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
     easing : callable, optional
         Easing function
     axis : matplotlib.axes.Axes, optional
@@ -3457,10 +3431,6 @@ class contourf(plotObject):
     X, Y : array-like, optional
         The coordinates of the values in *Z*.
 
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
     easing : callable, optional
         Easing function
     axis : matplotlib.axes.Axes, optional
@@ -3820,10 +3790,6 @@ class text(plotObject):
 
         A dictionary to override the default text properties. If fontdict
         is None, the defaults are determined by `.rcParams`.
-    duration : float
-        Duration of the animation
-    delay : float, default=0
-        Delay before starting
     easing : callable, optional
         Easing function
     axis : matplotlib.axes.Axes, optional
@@ -4055,6 +4021,10 @@ class svg(plotObject):
         the edge color.
     lw : float, default=2
         the line width.
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
     """
     def __init__(self, data, fc=None, ec='k', lw=2,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.PathPatch
@@ -4127,6 +4097,17 @@ class Circle(plotObject):
 
     Create a true circle at center *xy* = (*x*, *y*) with given *radius*.
 
+    Parameters
+    ----------
+    xy : (float, float)
+        xy coordinates of circle centre.
+    r : float
+        The radius
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
+
     Unlike `CirclePolygon` which is a polygonal approximation, this uses
     Bezier splines and is much closer to a scale-free circle.
     """
@@ -4175,6 +4156,11 @@ class fill(plotObject):
 
             ax.fill("time", "signal",
                     data={"time": [0, 1, 2], "signal": [0, 1, 0]})
+
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
 
     Returns
     -------
@@ -4225,6 +4211,10 @@ class Annulus(plotObject):
     angle : float, default: 0
         Rotation angle in degrees (anti-clockwise from the positive
         x-axis). Ignored for circular annuli (i.e., if *r* is a scalar).
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
     """
     def __init__(self,xy,r,width,angle=0.0,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.Circle
@@ -4272,6 +4262,12 @@ class Arc(plotObject):
         Angles greater than or equal to 360, or smaller than 0, are
         represented by an equivalent angle in the range [0, 360), by
         taking the input value mod 360.
+
+    easing : callable, optional
+        Easing function
+
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
 
     Other Parameters
     ----------------
@@ -4324,6 +4320,10 @@ class Arrow(plotObject):
     width : float, default: 1
         Scale factor for the width of the arrow. With a default value of 1,
         the tail width is 0.2 and head width is 0.6.
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
     **kwargs
         Keyword arguments control the `Patch` properties:
 
@@ -4367,6 +4367,10 @@ class Ellipse(plotObject):
         Total length (diameter) of vertical axis.
     angle : float, default: 0
         Rotation in degrees anti-clockwise.
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
     """
     def __init__(self,xy,width,height,angle=0,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.Ellipse
@@ -4419,6 +4423,12 @@ class FancyArrow(plotObject):
     head_starts_at_zero : bool, default: False
         If True, the head starts being drawn at coordinate 0
         instead of ending at coordinate 0.
+    
+    easing : callable, optional
+        Easing function
+
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
     """
     def __init__(self,x,y,dx,dy,width=0.001,
                  length_includes_head=False,head_width=None,head_length=None,
@@ -4465,6 +4475,12 @@ class Polygon(plotObject):
     closed : bool, default: True
         Whether the polygon is closed (i.e., has identical start and end
         points).
+
+    easing : callable, optional
+        Easing function
+
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
     """
     def __init__(self,xy,closed=True,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.Polygon
@@ -4513,6 +4529,10 @@ class Rectangle(plotObject):
         If ``'xy'``, rotate around the anchor point. If ``'center'`` rotate
         around the center. If 2-tuple of number, rotate around this
         coordinate.
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
     """
     def __init__(self,xy,width,height,angle=0.0,rotation_point='xy',easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.Rectangle
@@ -4554,6 +4574,12 @@ class RegularPolygon(plotObject):
 
     orientation : float
         The polygon rotation angle (in radians).
+
+    easing : callable, optional
+        Easing function
+
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
     """
     def __init__(self,xy,numVertices,radius=5,orientation=0,easing=None,axis=None, *args, **kwargs):
         self.mpl_obj_type = mpl.patches.RegularPolygon
@@ -4579,6 +4605,23 @@ class RegularPolygon(plotObject):
 class Wedge(plotObject):
     """
     Wedge shaped patch.
+
+    Parameters
+    ----------
+    center : (float,float)
+        The center of the wedge
+    r : float
+        The radius of the wedge
+    theta1 : float
+        The first angle (in degrees) of the wedge
+    theta2 : float
+        The second angle (in degrees) of the wedge
+    width : float, optional
+        The width of the partial wedge
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
 
     A wedge centered at *x*, *y* center with radius *r* that
     sweeps *theta1* to *theta2* (in degrees).  If *width* is given,
@@ -4663,6 +4706,12 @@ class bar(plotObject):
         To align the bars on the right edge pass a negative *width* and
         ``align='edge'``.
 
+    easing : callable, optional
+        Easing function
+
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
+
     Returns
     -------
     `.BarContainer`
@@ -4670,15 +4719,15 @@ class bar(plotObject):
 
     Other Parameters
     ----------------
-    color : :mpltype:`color` or list of :mpltype:`color`, optional
+    color : ``color`` or list of ``color``, optional
         The colors of the bar faces. This is an alias for *facecolor*.
         If both are given, *facecolor* takes precedence.
 
-    facecolor : :mpltype:`color` or list of :mpltype:`color`, optional
+    facecolor : ``color`` or list of ``color``, optional
         The colors of the bar faces.
         If both *color* and *facecolor are given, *facecolor* takes precedence.
 
-    edgecolor : :mpltype:`color` or list of :mpltype:`color`, optional
+    edgecolor : ``color`` or list of ``color``, optional
         The colors of the bar edges.
 
     linewidth : float or array-like, optional
@@ -4707,13 +4756,10 @@ class bar(plotObject):
             errors.
         - *None*: No errorbar. (Default)
 
-        See :doc:`/gallery/statistics/errorbar_features` for an example on
-        the usage of *xerr* and *yerr*.
-
-    ecolor : :mpltype:`color` or list of :mpltype:`color`, default: 'black'
+    ecolor : ``color`` or list of ``color``, default: 'black'
         The line color of the errorbars.
 
-    capsize : float, default: :rc:`errorbar.capsize`
+    capsize : float, default: ``errorbar.capsize``
         The length of the error bar caps in points.
 
     error_kw : dict, optional
@@ -4738,7 +4784,7 @@ class bar(plotObject):
     Notes
     -----
     Stacked bars can be achieved by passing individual *bottom* values per
-    bar. See :doc:`/gallery/lines_bars_and_markers/bar_stacked`.
+    bar.
     """
     def __init__(self,x,height,width=0.8,bottom=0,easing=None,axis=None, *args, **kwargs):
         #self.mpl_obj_type = mpl.container.BarContainer
@@ -4799,3 +4845,96 @@ class bar(plotObject):
             kwargs['bottom'] = [0]
         obj = self.axis.bar(data_x,data_y,**kwargs)
         self.obj = obj
+
+class ConnectionPatch(plotObject):
+    """
+    Connect point *xyA* in *coordsA* with point *xyB* in *coordsB*.
+
+    Parameters
+    ----------
+    easing : callable, optional
+        Easing function
+    axis : matplotlib.axes.Axes, optional
+        Axis to plot on
+
+    Valid keys are
+
+    ===============  ======================================================
+    Key              Description
+    ===============  ======================================================
+    arrowstyle       the arrow style
+    connectionstyle  the connection style
+    relpos           default is (0.5, 0.5)
+    patchA           default is bounding box of the text
+    patchB           default is None
+    shrinkA          default is 2 points
+    shrinkB          default is 2 points
+    mutation_scale   default is text size (in points)
+    mutation_aspect  default is 1.
+    ?                any key for `matplotlib.patches.PathPatch`
+    ===============  ======================================================
+
+    *coordsA* and *coordsB* are strings that indicate the
+    coordinates of *xyA* and *xyB*.
+
+    ==================== ==================================================
+    Property             Description
+    ==================== ==================================================
+    'figure points'      points from the lower left corner of the figure
+    'figure pixels'      pixels from the lower left corner of the figure
+    'figure fraction'    0, 0 is lower left of figure and 1, 1 is upper
+                            right
+    'subfigure points'   points from the lower left corner of the subfigure
+    'subfigure pixels'   pixels from the lower left corner of the subfigure
+    'subfigure fraction' fraction of the subfigure, 0, 0 is lower left.
+    'axes points'        points from lower left corner of the Axes
+    'axes pixels'        pixels from lower left corner of the Axes
+    'axes fraction'      0, 0 is lower left of Axes and 1, 1 is upper right
+    'data'               use the coordinate system of the object being
+                            annotated (default)
+    'offset points'      offset (in points) from the *xy* value
+    'polar'              you can specify *theta*, *r* for the annotation,
+                            even in cartesian plots.  Note that if you are
+                            using a polar Axes, you do not need to specify
+                            polar for the coordinate system since that is the
+                            native "data" coordinate system.
+    ==================== ==================================================
+
+    Alternatively they can be set to any valid
+    `~matplotlib.transforms.Transform`.
+
+    Note that 'subfigure pixels' and 'figure pixels' are the same
+    for the parent figure, so users who want code that is usable in
+    a subfigure can use 'subfigure pixels'.
+
+    .. note::
+
+        Using `ConnectionPatch` across two `~.axes.Axes` instances
+        is not directly compatible with :ref:`constrained layout
+        <constrainedlayout_guide>`. Add the artist
+        directly to the `.Figure` instead of adding it to a specific Axes,
+        or exclude it from the layout using ``con.set_in_layout(False)``.
+
+        .. code-block:: default
+
+            fig, ax = plt.subplots(1, 2, constrained_layout=True)
+            con = ConnectionPatch(..., axesA=ax[0], axesB=ax[1])
+            fig.add_artist(con)
+
+    """
+    def __init__(self,xyA,xyB,coordsA,coordsB=None,easing=None,axis=None, *args, **kwargs):
+        self.mpl_obj_type = mpl.patches.FancyArrowPatch
+        kwargs['xyA'] = xyA
+        kwargs['xyB'] = xyB
+        kwargs['coordsA'] = coordsA
+        kwargs['coordsB'] = coordsB
+        super().__init__(easing=easing,axis=axis,*args, **kwargs)
+        self.x = xyA[0]
+        self.y = xyA[1]
+
+    def function(self,data_x,data_y,x,kwargs):
+        if 'alpha' in kwargs and isinstance(kwargs['alpha'],np.ndarray):
+            kwargs['alpha'] = kwargs['alpha'][0]
+
+        self.obj = mpl.patches.ConnectionPatch(**kwargs)
+        self.axis.add_patch(self.obj)

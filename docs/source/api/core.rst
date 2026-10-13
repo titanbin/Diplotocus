@@ -158,6 +158,10 @@ Plot object animations
    :members:
    :undoc-members:
 
+.. autoclass:: diplotocus.animations.ConnectionPatch
+   :members:
+   :undoc-members:
+
 Easings
 -------
 
