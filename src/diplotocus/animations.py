@@ -10,6 +10,9 @@ from matplotlib.font_manager import FontProperties
 
 from . import easings
 
+#___________________________________
+# Helper functions
+#___________________________________
 def dealias(mpl_obj,kwargs):
     if mpl_obj is None:
         return kwargs
@@ -53,6 +56,10 @@ def unwrap_scalar(data):
     if isinstance(data, np.ndarray) and data.size == 1:
         return data.reshape(()).item()
     return data
+
+#___________________________________
+# Plot Objects classes
+#___________________________________
 
 class plotObject:
     """

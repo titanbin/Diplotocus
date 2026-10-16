@@ -82,27 +82,27 @@ class Timeline:
     ----------
     name : str
         the name used for the rendered images folder.
-    fig : Figure | None
+    fig : Figure, default=None
         an existing Figure to plot on. If None, a new Figure will be created.
-    quiet : bool
+    quiet : bool, default=False
         if True, any message will not be printed, and no progress bar will be shown.
-    dpi : int
+    dpi : int, default=200
         The DPI of the rendered images (higher = better resolution/slower render).
     bbox_inches : str or Bbox, optional
         Bbox in inches. Only the given portion of the figure is saved. If 'tight', try to figure out the tight bbox of the figure. If None, use savefig.bbox
-    transparent : bool
+    transparent : bool, default=False
         if True, the background color of the Figure and axes will be transparent. Can be used to render a transparent video (only compatible with a .mov video file).
-    axis_color : str
+    axis_color : str, default='k'
         Sets the color of the axes, ticks and labels to the specified color.
-    fig_color : str
+    fig_color : str, default='w'
         Sets the color of the figure to the specified color.
-    noaxis : bool
+    noaxis : bool, default=False
         if True, hides the axis lines, ticks and labels.
-    easing : easing
+    easing : easing, optional
         a global easing to be used if no other easing is specified on an animation.
-    xlim : tuple | None
+    xlim : tuple, optional
         if fig is None, sets the X limits of the created axis.
-    ylim : tuple | None
+    ylim : tuple, optional
         if fig is None, sets the Y limits of the created axis.
     """
     def __init__(self,
@@ -278,10 +278,8 @@ class Timeline:
         ----------
         plot_objects : plotObject or sequence of plotObject
             a single plot object (e.g. `scatter`, `plot`, `hist`...) or a list of plot objects.
-        easing : easing
+        easing : easing, optional
             an easing override used while rendering.
-        debug : bool
-            if True, skip writing frame images to disk.
         """
         if isinstance(plot_objects,plotObject):
             plot_objects = (plot_objects,)
@@ -345,24 +343,24 @@ class Timeline:
         self.timeline_str += 'duration {}\n'.format(1/30)
         self.x += 1
     
-    def save_video(self,path=None,speed=1,fps=30,ffmpeg_path='ffmpeg',multialpha=False,prerendered=False,clean=True):
+    def save_video(self,path=None,fps=30,speed=1,ffmpeg_path='ffmpeg',multialpha=False,prerendered=False,clean=True):
         """Render the current timeline to a video file.
 
         Parameters
         ----------
-        path : str | None
+        path : str, default=None
             the path to save the video file to.
-        speed : float
-            by default, animations are rendered at 30fps (frames per second). You can change this by setting the speed. For 60fps videos, choose speed=2.
-        fps : float
-            the fps value to use, by default 30fps.
-        ffmpeg_path : str
+        fps : float, default=30
+            the frames per second value to use, by default 30fps.
+        speed : float, default=1
+            a mutliplier for the frames per second value. For example, if fps is not set, the default value of 30 will be used and if speed=2, the video will be rendered at 60fps.
+        ffmpeg_path : str, default='ffmpeg'
              if ffmpeg is not recognised as is, you can set the path to the ffmpeg executable through this parameter.
-        multialpha : bool
+        multialpha : bool, default=False
             when rendering to a transparent .mov video, if you have semi-transparent frames, can be used to get better results.
-        prerendered : bool
+        prerendered : bool, default=False
             if save_video() was already called and clean was set to False, image files and the text list file associated still exist. If you want to rerender the video, without having to rerender all the frames, you can set prerendered to true, which will only run the ffmpeg command.
-        clean : bool
+        clean : bool, default=True
             if True, image files and the text list file associated are deleted after the video has been rendered.
         """
         if self.x == 0:
