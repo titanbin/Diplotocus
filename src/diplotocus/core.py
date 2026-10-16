@@ -345,7 +345,7 @@ class Timeline:
         self.timeline_str += 'duration {}\n'.format(1/30)
         self.x += 1
     
-    def save_video(self,path=None,speed=1,ffmpeg_path='ffmpeg',multialpha=False,prerendered=False,clean=True):
+    def save_video(self,path=None,speed=1,fps=30,ffmpeg_path='ffmpeg',multialpha=False,prerendered=False,clean=True):
         """Render the current timeline to a video file.
 
         Parameters
@@ -354,6 +354,8 @@ class Timeline:
             the path to save the video file to.
         speed : float
             by default, animations are rendered at 30fps (frames per second). You can change this by setting the speed. For 60fps videos, choose speed=2.
+        fps : float
+            the fps value to use, by default 30fps.
         ffmpeg_path : str
              if ffmpeg is not recognised as is, you can set the path to the ffmpeg executable through this parameter.
         multialpha : bool
@@ -378,9 +380,9 @@ class Timeline:
             self.timeline_str = ''
             for i in range(self.x):
                 self.timeline_str += 'file \'' + self.name + '_{}.png\'\n'.format(i)
-                self.timeline_str += 'duration {}\n'.format(1/30/speed)
+                self.timeline_str += 'duration {}\n'.format(1/fps/speed)
             self.timeline_str += 'file \'' + self.name + '_{}.png\'\n'.format(i)
-            self.timeline_str += 'duration {}\n'.format(1/30/speed)
+            self.timeline_str += 'duration {}\n'.format(1/fps/speed)
             with open(self.name + '/' + self.name + '.txt','w+') as f:
                 f.write(self.timeline_str)
         sequence_fn = self.name + '/' + self.name  + '.txt'

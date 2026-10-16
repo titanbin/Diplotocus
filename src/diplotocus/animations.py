@@ -37,6 +37,23 @@ def to_np_array(obj):
         obj = np.ravel(obj)
     return obj
 
+def flatten_frame_data(data):
+    data = to_np_array(data)
+
+    if data.dtype != object:
+        return np.ravel(data)
+
+    if data.size == 0:
+        return np.array([], dtype=float)
+
+    rows = [np.asarray(row) for row in data]
+    return np.concatenate(rows)
+
+def unwrap_scalar(data):
+    if isinstance(data, np.ndarray) and data.size == 1:
+        return data.reshape(()).item()
+    return data
+
 class plotObject:
     """
     A parent plotObject object for all plotting objects.
@@ -269,6 +286,11 @@ class plotObject:
         data_y = to_np_array(data_y)
         
         if self.function is not None:
+            data_x = flatten_frame_data(data_x)
+            data_y = flatten_frame_data(data_y)            
+            for key in kwargs:
+                kwargs[key] = flatten_frame_data(kwargs[key])
+                kwargs[key] = unwrap_scalar(kwargs[key])
             self.function(data_x,data_y,x,kwargs)
 
     def get_i_min_i_max_sample(self,anim,x,len_data):
@@ -929,17 +951,11 @@ class plotObject:
             
             t = self.get_t_from_x(anim,_x)
             if anim['name'] == 'scale':
-                start = to_np_array(anim['start'])
-                end = to_np_array(anim['end'])
-                self._scale(t,start,end,center=anim['center'])
+                self._scale(t,anim['start'],anim['end'],center=anim['center'])
             if anim['name'] == 'translate':
-                start = to_np_array(anim['start'])
-                end = to_np_array(anim['end'])
-                self._translate(t,start,end)
+                self._translate(t,anim['start'],anim['end'])
             if anim['name'] == 'rotate':
-                start = to_np_array(anim['start'])
-                end = to_np_array(anim['end'])
-                self._rotate(t,start,end,center=anim['center'])
+                self._rotate(t,anim['start'],anim['end'],center=anim['center'])
 
     def get_center(self):
         if self.mpl_obj_type == mpl.lines.Line2D:
